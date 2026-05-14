@@ -6,7 +6,6 @@
 [Release](https://github.com/gholts/sphere./releases/tag/latest)
 
 Sphere is an iOS app for controlling your proxy backends, it comes with simplicity and gorgeous native design language.
-an iOS app for
 
 ### `Preview`
 
