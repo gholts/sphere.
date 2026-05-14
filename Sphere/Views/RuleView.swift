@@ -2,40 +2,23 @@ import SwiftUI
 
 struct RuleView: View {
     @EnvironmentObject private var app: AppModel
+    @State private var refreshingRuleSetNames: Set<String> = []
 
     var body: some View {
         NavigationStack {
             List {
-                Section("Rule Providers") {
-                    if app.ruleProviders.isEmpty {
-                        Text("No providers")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(app.ruleProviders) { provider in
-                            RuleProviderRow(provider: provider) {
-                                Task { await app.refreshRuleProvider(provider.name) }
-                            }
-                        }
-                    }
-                }
-
                 Section("Rules") {
                     if app.rules.isEmpty {
                         EmptyStateView(title: "No Rules", message: "Backend returned no rule data.", systemImage: "list.bullet.rectangle")
                             .listRowBackground(Color.clear)
                     } else {
                         ForEach(app.rules) { rule in
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(rule.payload)
-                                    .lineLimit(2)
-                                HStack {
-                                    Text(rule.type)
-                                    Spacer()
-                                    Text(rule.proxy)
-                                }
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            }
+                            RuleRow(
+                                rule: rule,
+                                provider: provider(for: rule),
+                                isRefreshing: refreshingRuleSetNames.contains(rule.payload),
+                                refresh: { refreshRuleSet(rule.payload) }
+                            )
                         }
                     }
                 }
@@ -46,31 +29,79 @@ struct RuleView: View {
             }
         }
     }
+
+    private func provider(for rule: RuleItem) -> RuleProvider? {
+        guard rule.isRuleSet else { return nil }
+        return app.ruleProviders.first { $0.name == rule.payload }
+    }
+
+    private func refreshRuleSet(_ name: String) {
+        guard !refreshingRuleSetNames.contains(name) else { return }
+        refreshingRuleSetNames.insert(name)
+        Task {
+            await app.refreshRuleProvider(name)
+            await MainActor.run {
+                _ = refreshingRuleSetNames.remove(name)
+            }
+        }
+    }
 }
 
-struct RuleProviderRow: View {
-    var provider: RuleProvider
+private struct RuleRow: View {
+    var rule: RuleItem
+    var provider: RuleProvider?
+    var isRefreshing: Bool
     var refresh: () -> Void
 
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text(provider.name)
-                HStack {
-                    Text(provider.behavior ?? provider.vehicleType ?? provider.type ?? "Provider")
-                    if let count = provider.ruleCount {
-                        Text("\(count) rules")
-                    }
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                Text(rule.displayTitle)
+                    .lineLimit(2)
+                metadataRow
             }
             Spacer()
-            Button(action: refresh) {
-                Image(systemName: "arrow.clockwise")
+            if provider?.isRemote == true {
+                Button(action: refresh) {
+                    ZStack {
+                        Image(systemName: "arrow.clockwise")
+                            .opacity(isRefreshing ? 0 : 1)
+                        if isRefreshing {
+                            ProgressView()
+                                .controlSize(.small)
+                                .transition(.opacity.combined(with: .scale(scale: 0.92)))
+                        }
+                    }
+                    .frame(width: 24, height: 24)
+                    .animation(.smooth(duration: 0.22), value: isRefreshing)
+                }
+                .buttonStyle(.borderless)
+                .disabled(isRefreshing)
+                .accessibilityLabel("Refresh \(rule.payload)")
             }
-            .buttonStyle(.borderless)
-            .accessibilityLabel("Refresh \(provider.name)")
+        }
+    }
+
+    @ViewBuilder
+    private var metadataRow: some View {
+        if rule.isMatch {
+            Text(rule.proxy)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } else {
+            HStack {
+                Text(rule.type)
+                if let provider {
+                    Text(provider.behavior ?? provider.vehicleType ?? provider.type ?? "Provider")
+                }
+                if let count = provider?.ruleCount {
+                    Text("\(count) rules")
+                }
+                Spacer()
+                Text(rule.proxy)
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
     }
 }

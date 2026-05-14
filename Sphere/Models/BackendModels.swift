@@ -478,15 +478,42 @@ struct ProxyDelayPayload: Decodable, Equatable, Sendable {
 }
 
 struct RuleItem: Identifiable, Codable, Equatable, Sendable {
-    var id: String { "\(type)-\(payload)-\(proxy)" }
+    var id: String {
+        if let index {
+            return "\(index)-\(type)-\(payload)-\(proxy)"
+        }
+        return "\(type)-\(payload)-\(proxy)"
+    }
     var type: String
     var payload: String
     var proxy: String
+    var index: Int?
 
-    init(type: String, payload: String, proxy: String) {
+    var isRuleSet: Bool {
+        ["ruleset", "rule-set", "rule_set"].contains(normalizedType)
+    }
+
+    var isMatch: Bool {
+        normalizedType == "match"
+    }
+
+    var displayTitle: String {
+        if isMatch {
+            return "Match"
+        }
+        let value = payload.trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? type : value
+    }
+
+    private var normalizedType: String {
+        type.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    init(type: String, payload: String, proxy: String, index: Int? = nil) {
         self.type = type
         self.payload = payload
         self.proxy = proxy
+        self.index = index
     }
 }
 
@@ -504,6 +531,10 @@ struct RuleProvider: Identifiable, Codable, Equatable, Sendable {
     var updatedAt: String?
     var ruleCount: Int?
 
+    var isRemote: Bool {
+        vehicleType?.caseInsensitiveCompare("Inline") != .orderedSame
+    }
+
     enum CodingKeys: String, CodingKey {
         case name
         case type
@@ -512,6 +543,24 @@ struct RuleProvider: Identifiable, Codable, Equatable, Sendable {
         case format
         case updatedAt
         case ruleCount
+    }
+
+    init(
+        name: String,
+        type: String? = nil,
+        vehicleType: String? = nil,
+        behavior: String? = nil,
+        format: String? = nil,
+        updatedAt: String? = nil,
+        ruleCount: Int? = nil
+    ) {
+        self.name = name
+        self.type = type
+        self.vehicleType = vehicleType
+        self.behavior = behavior
+        self.format = format
+        self.updatedAt = updatedAt
+        self.ruleCount = ruleCount
     }
 
     init(from decoder: Decoder) throws {

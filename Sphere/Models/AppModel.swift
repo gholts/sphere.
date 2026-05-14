@@ -377,9 +377,15 @@ final class AppModel: ObservableObject {
     func refreshRules(source: RefreshSource = .manual) async {
         guard let client else { return }
         prepareRefresh(source: source)
-        let outcome = await captureErrors {
-            rules = try await client.rules()
-            ruleProviders = try await client.ruleProviders()
+        async let rulesValue = result { try await client.rules() }
+        async let ruleProvidersValue = result { try await client.ruleProviders() }
+        async let configValue = result { try await client.configs() }
+
+        var outcome = RefreshOutcome()
+        outcome.merge(apply(await rulesValue) { rules = $0 })
+        outcome.merge(apply(await ruleProvidersValue) { ruleProviders = $0 })
+        outcome.merge(apply(await configValue) { applyConfigs($0) })
+        if outcome.backendConnected {
             saveCachedDataIfUseful()
         }
         await finishRefresh(outcome, source: source)
@@ -407,7 +413,9 @@ final class AppModel: ObservableObject {
         guard let client else { return }
         _ = await captureErrors {
             try await client.refreshRuleProvider(name)
+            rules = try await client.rules()
             ruleProviders = try await client.ruleProviders()
+            applyConfigs(try await client.configs())
             saveCachedDataIfUseful()
         }
     }
