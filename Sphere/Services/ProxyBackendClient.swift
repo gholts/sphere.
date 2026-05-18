@@ -97,7 +97,7 @@ nonisolated enum BackendError: LocalizedError, Equatable, Sendable {
             return "Bad backend URL"
         case .invalidResponse:
             return "Bad backend response"
-        case .httpStatus(let status, let body):
+        case let .httpStatus(status, body):
             return "HTTP \(status): \(HTTPErrorBodyDisplay.message(from: body))"
         case .unsupportedBackend(let backend):
             return "\(backend) backend not implemented"

@@ -21,7 +21,9 @@ struct RefreshOutcome {
     var backendConnected = false
     var errorMessage: String?
 
-    init() {}
+    init() {
+        // Keeps explicit empty outcome construction at call sites.
+    }
 
     init(error: Error) {
         guard !error.isCancellation else { return }

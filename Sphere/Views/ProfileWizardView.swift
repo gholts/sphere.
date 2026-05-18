@@ -87,6 +87,7 @@ struct ProfileWizardView: View {
                             Text(testResult.message)
                         } icon: {
                             Image(systemName: testResult.systemImage)
+                                .accessibilityHidden(true)
                         }
                         .foregroundStyle(testResult.tint)
                     }

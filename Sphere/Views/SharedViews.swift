@@ -55,6 +55,7 @@ struct DisabledAwareActionIcon: View {
     var body: some View {
         Image(systemName: systemImage)
             .foregroundStyle(isEnabled ? enabledStyle : disabledStyle)
+            .accessibilityHidden(true)
     }
 }
 

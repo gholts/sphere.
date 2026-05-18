@@ -26,6 +26,7 @@ struct ConnectionsView: View {
                     } icon: {
                         Image(systemName: "xmark.circle")
                             .foregroundStyle(.red)
+                            .accessibilityHidden(true)
                     }
                 }
             }

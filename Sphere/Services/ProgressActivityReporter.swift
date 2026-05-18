@@ -31,9 +31,17 @@ enum ProgressActivityFractions {
 }
 
 struct NoopProgressActivityReporter: ProgressActivityReporting {
-    func start(kind _: SphereProgressActivityKind, title _: String, detail _: String, fraction _: Double) {}
-    func update(title _: String, detail _: String, fraction _: Double) {}
-    func finish(status _: SphereProgressActivityStatus, title _: String, detail _: String) {}
+    func start(kind _: SphereProgressActivityKind, title _: String, detail _: String, fraction _: Double) {
+        // Intentionally empty for tests and unsupported activity environments.
+    }
+
+    func update(title _: String, detail _: String, fraction _: Double) {
+        // Intentionally empty for tests and unsupported activity environments.
+    }
+
+    func finish(status _: SphereProgressActivityStatus, title _: String, detail _: String) {
+        // Intentionally empty for tests and unsupported activity environments.
+    }
 }
 
 enum ProgressActivityReporterFactory {

@@ -3,7 +3,7 @@ import Foundation
 @MainActor
 enum PreviewFixtures {
     static func app() -> AppModel {
-        let defaults = UserDefaults(suiteName: "sphere.preview.\(UUID().uuidString)")!
+        let defaults = UserDefaults(suiteName: "sphere.preview.\(UUID().uuidString)") ?? .standard
         let app = AppModel(defaults: defaults)
         app.addProfile(APIProfile(name: "Local Mihomo", baseURL: "http://127.0.0.1:9090", secret: ""))
         app.overview = BackendOverview(

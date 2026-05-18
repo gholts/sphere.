@@ -17,14 +17,14 @@ struct MoreView: View {
                             Text(profile.name).tag(Optional(profile.id))
                         }
                     }
-                    
+
                     Button {
                         profileForm = .add
                     } label: {
                         Label("Add Profile", systemImage: "plus.circle")
                     }
                 }
-                
+
                 Section("Overview") {
                     Picker(selection: modeBinding) {
                         ForEach(ClashMode.allCases) { mode in
@@ -34,10 +34,10 @@ struct MoreView: View {
                         Text("Mode")
                             .foregroundStyle(.secondary)
                     }
-                    
+
                     OverviewRows(overview: live.overview)
                 }
-                
+
                 if app.canUpdateCore {
                     Section("Update Core") {
                         ForEach(CoreUpdateChannel.allCases) { channel in
@@ -54,21 +54,21 @@ struct MoreView: View {
                         }
                     }
                 }
-                
+
                 Section("Tools") {
                     NavigationLink {
                         ConfigEditorView()
                     } label: {
                         Label("Configuration", systemImage: "slider.horizontal.3")
                     }
-                    
+
                     NavigationLink {
                         LogBookView()
                     } label: {
                         Label("Log Book", systemImage: "doc.text.magnifyingglass")
                     }
                 }
-                
+
                 Section("Profiles") {
                     ForEach(app.profiles) { profile in
                         Button {
@@ -85,13 +85,13 @@ struct MoreView: View {
                                 Image(systemName: "chevron.right")
                                     .font(.caption)
                                     .foregroundStyle(.tertiary)
+                                    .accessibilityHidden(true)
                             }
                         }
                         .foregroundStyle(.primary)
                     }
                     .onDelete(perform: app.deleteProfiles)
                 }
-                
             }
             .backendPageToolbar(tab: .more)
             .sheet(item: $profileForm) { form in

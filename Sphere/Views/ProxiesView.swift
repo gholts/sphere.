@@ -94,6 +94,7 @@ struct ProxyGroupExpansionButton: View {
                     .frame(width: 64, alignment: .trailing)
                 Image(systemName: symbol)
                     .frame(width: 12, alignment: .trailing)
+                    .accessibilityHidden(true)
             }
             .frame(width: 82, alignment: .trailing)
             .frame(minWidth: 44, minHeight: 44, alignment: .center)
@@ -118,6 +119,7 @@ struct ProxyGroupSpeedTestButton: View {
             ZStack {
                 Image(systemName: "speedometer")
                     .opacity(isTesting ? 0 : 1)
+                    .accessibilityHidden(true)
                 if isTesting {
                     ProgressView()
                         .controlSize(.mini)
@@ -324,6 +326,7 @@ struct ProxyIconView: View {
                 .resizable()
                 .scaledToFit()
                 .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
         } else {
             CachedProxyIconImage(icon: icon)
                 .id(icon)
@@ -340,6 +343,7 @@ private struct CachedProxyIconImage: View {
             Image(uiImage: image)
                 .resizable()
                 .scaledToFit()
+                .accessibilityHidden(true)
         } else {
             Color.clear
                 .task(id: icon) {

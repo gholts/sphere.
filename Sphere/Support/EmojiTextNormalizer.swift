@@ -243,6 +243,6 @@ private extension Unicode.Scalar {
     }
 
     var regionalIndicatorLetter: Character {
-        Character(UnicodeScalar(value - 0x1F1E6 + 65)!)
+        UnicodeScalar(value - 0x1F1E6 + 65).map(Character.init) ?? "?"
     }
 }

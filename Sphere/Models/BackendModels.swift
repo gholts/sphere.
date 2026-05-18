@@ -260,7 +260,7 @@ nonisolated struct ProxyCollection: Codable, Equatable, Sendable {
                 if left.name == "GLOBAL" { return true }
                 if right.name == "GLOBAL" { return false }
                 switch (globalOrder[left.name], globalOrder[right.name]) {
-                case (.some(let leftIndex), .some(let rightIndex)):
+                case let (.some(leftIndex), .some(rightIndex)):
                     return leftIndex < rightIndex
                 case (.some, nil):
                     return true
@@ -394,7 +394,7 @@ nonisolated struct SubscriptionInfo: Codable, Equatable, Sendable {
 
     var usedBytes: Int64? {
         switch (upload, download) {
-        case (.some(let upload), .some(let download)):
+        case let (.some(upload), .some(download)):
             return upload + download
         case (.some(let upload), nil):
             return upload
