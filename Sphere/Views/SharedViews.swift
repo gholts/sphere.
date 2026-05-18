@@ -88,7 +88,7 @@ struct PendingErrorBadge: View {
 }
 
 struct BackendPageToolbar: ViewModifier {
-    @EnvironmentObject private var app: AppModel
+    @Environment(AppModel.self) private var app
     @Environment(\.iPadTopNavigationControls) private var iPadTopNavigationControls
     var tab: AppTab
 
@@ -121,9 +121,10 @@ struct BackendPageToolbar: ViewModifier {
 }
 
 private struct IPadTopTabPicker: View {
-    @EnvironmentObject private var app: AppModel
+    @Environment(AppModel.self) private var app
 
     var body: some View {
+        @Bindable var app = app
         Picker("Tab", selection: $app.selectedTab) {
             ForEach(AppTab.allCases) { tab in
                 Text(tab.title).tag(tab)

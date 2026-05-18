@@ -141,8 +141,6 @@ extension AppModel {
             suspendBackgroundRefresh()
         } else if source.isUserInitiated {
             isAutoRefreshSuspended = false
-            startLiveStreams()
-            startAutoRefresh()
         }
         if source.waitsForBackendErrorDebounce {
             await waitForBackendErrorDebounceIfNeeded()
@@ -151,8 +149,6 @@ extension AppModel {
 
     func suspendBackgroundRefresh() {
         isAutoRefreshSuspended = true
-        stopAutoRefresh()
-        stopLiveStreams()
     }
 
     func finishManualRefresh(source: RefreshSource) {
@@ -164,46 +160,50 @@ extension AppModel {
     }
 
     func waitForBackendErrorDebounceIfNeeded() async {
-        guard isBackendErrorDebouncing, let backendErrorTask else { return }
-        await backendErrorTask.value
+        await runBackendErrorDebounce(revision: backendErrorDebounceRevision)
     }
 
     func markBackendConnected() {
         backendSuccessGeneration &+= 1
-        guard isBackendErrorDebouncing || errorMessage != nil || backendErrorTask != nil || pendingBackendErrorMessage != nil else {
+        guard isBackendErrorDebouncing || errorMessage != nil || pendingBackendErrorMessage != nil else {
             return
         }
-        backendErrorTask?.cancel()
-        backendErrorTask = nil
         pendingBackendErrorMessage = nil
         isBackendErrorDebouncing = false
         errorMessage = nil
+        backendErrorDebounceRevision &+= 1
     }
 
     func beginBackendErrorDebounce(_ message: String) {
         pendingBackendErrorMessage = message
         guard !isBackendErrorDebouncing else { return }
-        backendErrorTask?.cancel()
         errorMessage = nil
         isBackendErrorDebouncing = true
-        let generation = backendSuccessGeneration
-        let duration = backendErrorDebounceDuration
-        backendErrorTask = Task { [weak self] in
-            do {
-                try await Task.sleep(for: duration)
-            } catch {
-                return
-            }
-            self?.confirmBackendError(startedAtGeneration: generation)
+        backendErrorStartedAtGeneration = backendSuccessGeneration
+        backendErrorDebounceRevision &+= 1
+    }
+
+    func runBackendErrorDebounce() async {
+        await runBackendErrorDebounce(revision: backendErrorDebounceRevision)
+    }
+
+    private func runBackendErrorDebounce(revision: Int) async {
+        guard isBackendErrorDebouncing, revision == backendErrorDebounceRevision else { return }
+        do {
+            try await Task.sleep(for: backendErrorDebounceDuration)
+        } catch {
+            return
         }
+        guard revision == backendErrorDebounceRevision else { return }
+        confirmBackendError(startedAtGeneration: backendErrorStartedAtGeneration)
     }
 
     func confirmBackendError(startedAtGeneration generation: Int) {
-        backendErrorTask = nil
         guard backendSuccessGeneration == generation else {
             pendingBackendErrorMessage = nil
             isBackendErrorDebouncing = false
             errorMessage = nil
+            backendErrorDebounceRevision &+= 1
             return
         }
         errorMessage = pendingBackendErrorMessage
@@ -212,46 +212,31 @@ extension AppModel {
     }
 
     func resetLoadedData() {
-        stopLiveStreams()
-        stopAutoRefresh()
-        backendErrorTask?.cancel()
-        cacheSaveTask?.cancel()
-        backendErrorTask = nil
-        cacheSaveTask = nil
         pendingBackendErrorMessage = nil
+        pendingCacheSave = false
         isBackendErrorDebouncing = false
         isManualRefreshActive = false
         toolbarRefreshingTabs.removeAll()
         manualRefreshDepth = 0
         errorMessage = nil
         backendSuccessGeneration &+= 1
-        liveStore.reset()
-        proxyCollection = ProxyCollection()
-        rebuildProxyLookup()
-        proxyGroupIcons = [:]
-        loadedProxyGroupIconsKey = nil
-        proxyProviders = []
-        rules = []
-        ruleProviders = []
-        logStore.reset()
-        configs = [:]
-        clashMode = .rule
+        backendErrorDebounceRevision &+= 1
+        cacheSaveRevision &+= 1
+        liveState.reset()
+        proxyStore.reset()
+        configStore.reset()
     }
 
     func proxyGroupExpandedKey(_ groupName: String) -> String {
-        "\(Keys.proxyGroupExpandedPrefix).\(selectedProfileID?.uuidString ?? "none").\(groupName)"
+        proxyStore.proxyGroupExpandedKey(groupName, profileID: selectedProfileID)
     }
 
     func cacheKey(profileID: UUID?) -> String {
-        "\(Keys.cachedDataPrefix).\(profileID?.uuidString ?? "none")"
+        "\(AppStorageKeys.cachedDataPrefix).\(profileID?.uuidString ?? "none")"
     }
 
     func cacheKey() -> String {
         cacheKey(profileID: selectedProfileID)
-    }
-
-    func proxyGroupIconsKey() -> String {
-        "\(Keys.proxyGroupIconsPrefix).\(selectedProfileID?.uuidString ?? "none")"
     }
 
     func loadCachedData() {
@@ -259,8 +244,7 @@ extension AppModel {
               let snapshot = try? JSONDecoder().decode(BackendDataCache.self, from: data)
         else { return }
         overview = snapshot.overview
-        proxyCollection = restoringCachedProxyGroupIcons(in: snapshot.proxyCollection)
-        rebuildProxyLookup()
+        setProxyCollection(snapshot.proxyCollection)
         proxyProviders = snapshot.proxyProviders
         rules = snapshot.rules
         ruleProviders = snapshot.ruleProviders
@@ -294,98 +278,48 @@ extension AppModel {
             saveCachedDataIfUseful()
             return
         }
-        cacheSaveTask?.cancel()
-        cacheSaveTask = Task { @MainActor [weak self] in
+        pendingCacheSave = true
+        cacheSaveRevision &+= 1
+    }
+
+    func runPendingCacheSave() async {
+        guard pendingCacheSave else { return }
+        let delay = max(0, cacheSaveInterval - Date().timeIntervalSince(lastCacheSave))
+        if delay > 0 {
             do {
                 try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
             } catch {
                 return
             }
-            self?.saveCachedDataIfUseful()
         }
+        guard pendingCacheSave else { return }
+        pendingCacheSave = false
+        saveCachedDataIfUseful()
     }
 
     func flushPendingCacheSave() {
-        guard cacheSaveTask != nil else { return }
-        cacheSaveTask?.cancel()
-        cacheSaveTask = nil
+        guard pendingCacheSave else { return }
+        pendingCacheSave = false
+        cacheSaveRevision &+= 1
         saveCachedDataIfUseful()
     }
 
     @discardableResult
     func setProxyCollection(_ collection: ProxyCollection) -> Bool {
-        let nextCollection = restoringCachedProxyGroupIcons(in: collection)
-        guard proxyCollection != nextCollection else {
-            return mergeProxyGroupIcons(from: nextCollection.groups)
-        }
-        proxyCollection = nextCollection
-        rebuildProxyLookup()
-        _ = mergeProxyGroupIcons(from: nextCollection.groups)
-        return true
+        proxyStore.setProxyCollection(collection, profileID: selectedProfileID)
     }
 
     @discardableResult
     func setProxyProviders(_ providers: [ProxyProvider]) -> Bool {
-        guard proxyProviders != providers else { return false }
-        proxyProviders = providers
-        return true
+        proxyStore.setProxyProviders(providers)
     }
 
     func proxyItem(named name: String) -> ProxyItem? {
-        proxyLookup[name] ?? proxyCollection.item(named: name)
+        proxyStore.proxyItem(named: name)
     }
 
     func rebuildProxyLookup() {
-        let pairs = (proxyCollection.proxies + proxyCollection.groups).map { ($0.name, $0) }
-        proxyLookup = Dictionary(pairs, uniquingKeysWith: { first, _ in first })
-    }
-
-    func ensureProxyGroupIconsLoaded() {
-        let key = proxyGroupIconsKey()
-        guard loadedProxyGroupIconsKey != key else { return }
-        loadedProxyGroupIconsKey = key
-        guard let data = defaults.data(forKey: key),
-              let icons = try? JSONDecoder().decode([String: String].self, from: data)
-        else {
-            proxyGroupIcons = [:]
-            return
-        }
-        proxyGroupIcons = icons
-    }
-
-    func restoringCachedProxyGroupIcons(in collection: ProxyCollection) -> ProxyCollection {
-        ensureProxyGroupIconsLoaded()
-        guard !proxyGroupIcons.isEmpty else { return collection }
-        var next = collection
-        var restoredIcon = false
-        next.groups = collection.groups.map { group in
-            guard group.icon?.isEmpty ?? true, let icon = proxyGroupIcons[group.name] else { return group }
-            restoredIcon = true
-            var copy = group
-            copy.icon = icon
-            return copy
-        }
-        return restoredIcon ? next : collection
-    }
-
-    func mergeProxyGroupIcons(from groups: [ProxyItem]) -> Bool {
-        ensureProxyGroupIconsLoaded()
-        var changed = false
-        for group in groups {
-            guard let icon = group.icon, !icon.isEmpty else { continue }
-            if proxyGroupIcons[group.name] != icon {
-                proxyGroupIcons[group.name] = icon
-                changed = true
-            }
-        }
-        guard changed else { return false }
-        saveProxyGroupIcons()
-        return true
-    }
-
-    func saveProxyGroupIcons() {
-        guard let data = try? JSONEncoder().encode(proxyGroupIcons) else { return }
-        defaults.set(data, forKey: proxyGroupIconsKey())
+        proxyStore.rebuildProxyLookup()
     }
 
     func applyOverviewStats(_ nextOverview: BackendOverview) {
@@ -421,11 +355,7 @@ extension AppModel {
     }
 
     func applyConfigs(_ values: [String: JSONValue]) {
-        configs = values
-        if case .string(let mode)? = values["mode"],
-           let decodedMode = ClashMode(mihomoValue: mode) {
-            clashMode = decodedMode
-        }
+        configStore.applyConfigs(values)
     }
 
     var hasCacheableData: Bool {

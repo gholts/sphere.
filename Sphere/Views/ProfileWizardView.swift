@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ProfileWizardView: View {
-    @EnvironmentObject private var app: AppModel
+    @Environment(AppModel.self) private var app
     @Environment(\.dismiss) private var dismiss
     @State private var name: String
     @State private var kind: BackendKind

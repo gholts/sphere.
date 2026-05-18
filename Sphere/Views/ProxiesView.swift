@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 struct ProxiesView: View {
-    @EnvironmentObject private var app: AppModel
+    @Environment(AppModel.self) private var app
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     private var proxyColumns: [GridItem] {
@@ -138,7 +138,7 @@ struct ProxyGroupSpeedTestButton: View {
 }
 
 struct ProxyGroupSection: View {
-    @EnvironmentObject private var app: AppModel
+    @Environment(AppModel.self) private var app
     @State private var isExpanded = false
     var group: ProxyItem
     var proxyColumns: [GridItem]
@@ -255,7 +255,10 @@ struct ProxyChoiceButton: View {
             .frame(maxWidth: .infinity, minHeight: 54, alignment: .leading)
             .padding(.horizontal, 12)
             .padding(.vertical, 4)
-            .background(isSelected ? Color.accentColor.opacity(0.12) : Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 16))
+            .background(
+                isSelected ? Color.accentColor.opacity(0.12) : Color.secondary.opacity(0.08)
+            )
+            .clipShape(.rect(cornerRadius: 16))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(proxy?.displayName ?? name.backendNameForDisplay)\(isSelected ? ", selected" : "")")

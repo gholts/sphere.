@@ -78,7 +78,7 @@ nonisolated enum URLNormalizer {
     }
 }
 
-nonisolated enum ProfileStore {
+nonisolated enum ProfileCodec {
     static func decode(_ data: Data) -> [APIProfile] {
         (try? JSONDecoder().decode([APIProfile].self, from: data)) ?? []
     }

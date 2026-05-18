@@ -1,5 +1,5 @@
-import Combine
 import Foundation
+import Observation
 import SwiftUI
 
 enum RefreshSource {
@@ -40,6 +40,38 @@ struct RefreshOutcome {
     }
 }
 
+private enum RefreshAllValue: Sendable {
+    case version(Result<String, Error>)
+    case overview(Result<BackendOverview, Error>)
+    case proxies(Result<ProxyCollection, Error>)
+    case proxyProviders(Result<[ProxyProvider], Error>)
+    case rules(Result<[RuleItem], Error>)
+    case ruleProviders(Result<[RuleProvider], Error>)
+    case configs(Result<[String: JSONValue], Error>)
+    case mode(Result<ClashMode, Error>)
+}
+
+private enum RefreshProxiesValue: Sendable {
+    case proxies(Result<ProxyCollection, Error>)
+    case proxyProviders(Result<[ProxyProvider], Error>)
+}
+
+private enum RefreshRulesValue: Sendable {
+    case rules(Result<[RuleItem], Error>)
+    case ruleProviders(Result<[RuleProvider], Error>)
+    case configs(Result<[String: JSONValue], Error>)
+}
+
+nonisolated private func backendResult<T: Sendable>(
+    _ operation: @Sendable () async throws -> T
+) async -> Result<T, Error> {
+    do {
+        return .success(try await operation())
+    } catch {
+        return .failure(error)
+    }
+}
+
 extension Error {
     var isCancellation: Bool {
         if self is CancellationError { return true }
@@ -63,80 +95,36 @@ extension Error {
     }
 }
 
+@Observable
 @MainActor
-final class LiveBackendStore: ObservableObject {
-    @Published var overview = BackendOverview.empty
-    @Published var connections = ConnectionsSnapshot(uploadTotal: nil, downloadTotal: nil, connections: [])
+final class AppModel {
+    let profileStore: ProfileStore
+    let proxyStore: ProxyStore
+    let configStore: ConfigStore
+    let liveState: LiveState
 
-    func reset() {
-        overview = .empty
-        connections = ConnectionsSnapshot(uploadTotal: nil, downloadTotal: nil, connections: [])
-    }
-}
+    var selectedTab: AppTab = .proxies
+    var isLoading = false
+    var errorMessage: String?
+    var isUpdatingCore = false
+    var isAutoRefreshSuspended = false
+    var isBackendErrorDebouncing = false
+    var isManualRefreshActive = false
+    var toolbarRefreshingTabs: Set<AppTab> = []
+    var backendErrorDebounceRevision = 0
+    var cacheSaveRevision = 0
 
-@MainActor
-final class LogStore: ObservableObject {
-    @Published var entries: [LogEntry] = []
-    @Published var level: LogLevel = .info
-
-    func reset() {
-        entries = []
-        level = .info
-    }
-}
-
-@MainActor
-final class AppModel: ObservableObject {
-    @Published var profiles: [APIProfile] = []
-    @Published var selectedProfileID: UUID?
-    @Published var selectedTab: AppTab = .proxies
-    @Published var isLoading = false
-    @Published var errorMessage: String?
-
-    @Published var proxyCollection = ProxyCollection()
-    @Published var proxyProviders: [ProxyProvider] = []
-    @Published var rules: [RuleItem] = []
-    @Published var ruleProviders: [RuleProvider] = []
-    @Published var configs: [String: JSONValue] = [:]
-    @Published var clashMode: ClashMode = .rule
-    @Published var isUpdatingCore = false
-    @Published var isAutoRefreshSuspended = false
-    @Published var isBackendErrorDebouncing = false
-    @Published var isManualRefreshActive = false
-    @Published var toolbarRefreshingTabs: Set<AppTab> = []
-    @Published private(set) var isTestingProxyGroupDelays = false
-    @Published private(set) var proxyGroupExpansionRevision = 0
-
-    let liveStore = LiveBackendStore()
-    let logStore = LogStore()
-
-    let defaults: UserDefaults
-    private let makeClient: @MainActor (APIProfile) -> any ProxyBackendClient
-    private let progressActivityReporter: any ProgressActivityReporting
-    let backendErrorDebounceDuration: Duration
-    var connectionTask: Task<Void, Never>?
-    var memoryTask: Task<Void, Never>?
-    var trafficTask: Task<Void, Never>?
-    var logTask: Task<Void, Never>?
-    var autoRefreshTask: Task<Void, Never>?
-    var backendErrorTask: Task<Void, Never>?
-    var cacheSaveTask: Task<Void, Never>?
-    var backendSuccessGeneration = 0
-    var manualRefreshDepth = 0
-    var pendingBackendErrorMessage: String?
-    var lastCacheSave = Date.distantPast
-    var proxyLookup: [String: ProxyItem] = [:]
-    var proxyGroupIcons: [String: String] = [:]
-    var loadedProxyGroupIconsKey: String?
-    let cacheSaveInterval: TimeInterval = 5
-
-    enum Keys {
-        static let profiles = "sphere.profiles"
-        static let selectedProfileID = "sphere.selectedProfileID"
-        static let proxyGroupExpandedPrefix = "sphere.proxyGroupExpanded"
-        static let cachedDataPrefix = "sphere.cachedData"
-        static let proxyGroupIconsPrefix = "sphere.proxyGroupIcons"
-    }
+    @ObservationIgnored let defaults: UserDefaults
+    @ObservationIgnored private let makeClient: @MainActor (APIProfile) -> any ProxyBackendClient
+    @ObservationIgnored private let progressActivityReporter: any ProgressActivityReporting
+    @ObservationIgnored let backendErrorDebounceDuration: Duration
+    @ObservationIgnored var backendSuccessGeneration = 0
+    @ObservationIgnored var backendErrorStartedAtGeneration = 0
+    @ObservationIgnored var manualRefreshDepth = 0
+    @ObservationIgnored var pendingBackendErrorMessage: String?
+    @ObservationIgnored var pendingCacheSave = false
+    @ObservationIgnored var lastCacheSave = Date.distantPast
+    @ObservationIgnored let cacheSaveInterval: TimeInterval = 5
 
     init(
         defaults: UserDefaults = .standard,
@@ -145,52 +133,93 @@ final class AppModel: ObservableObject {
         clientFactory: @escaping @MainActor (APIProfile) -> any ProxyBackendClient = BackendClientFactory.make(profile:)
     ) {
         self.defaults = defaults
+        self.profileStore = ProfileStore(defaults: defaults)
+        self.proxyStore = ProxyStore(defaults: defaults)
+        self.configStore = ConfigStore()
+        self.liveState = LiveState()
         self.backendErrorDebounceDuration = backendErrorDebounceDuration
         self.progressActivityReporter = progressActivityReporter ?? ProgressActivityReporterFactory.makeDefault()
         self.makeClient = clientFactory
-        loadProfiles()
         loadCachedData()
     }
 
-    deinit {
-        connectionTask?.cancel()
-        memoryTask?.cancel()
-        trafficTask?.cancel()
-        logTask?.cancel()
-        autoRefreshTask?.cancel()
-        backendErrorTask?.cancel()
-        cacheSaveTask?.cancel()
+    var profiles: [APIProfile] {
+        get { profileStore.profiles }
+        set { profileStore.profiles = newValue }
+    }
+
+    var selectedProfileID: UUID? {
+        get { profileStore.selectedProfileID }
+        set { profileStore.selectedProfileID = newValue }
+    }
+
+    var proxyCollection: ProxyCollection {
+        get { proxyStore.proxyCollection }
+        set {
+            proxyStore.proxyCollection = newValue
+            proxyStore.rebuildProxyLookup()
+        }
+    }
+
+    var proxyProviders: [ProxyProvider] {
+        get { proxyStore.proxyProviders }
+        set { proxyStore.proxyProviders = newValue }
+    }
+
+    var rules: [RuleItem] {
+        get { configStore.rules }
+        set { configStore.rules = newValue }
+    }
+
+    var ruleProviders: [RuleProvider] {
+        get { configStore.ruleProviders }
+        set { configStore.ruleProviders = newValue }
+    }
+
+    var configs: [String: JSONValue] {
+        get { configStore.configs }
+        set { configStore.configs = newValue }
+    }
+
+    var clashMode: ClashMode {
+        get { configStore.clashMode }
+        set { configStore.clashMode = newValue }
+    }
+
+    var isTestingProxyGroupDelays: Bool {
+        proxyStore.isTestingProxyGroupDelays
+    }
+
+    var proxyGroupExpansionRevision: Int {
+        proxyStore.proxyGroupExpansionRevision
     }
 
     var overview: BackendOverview {
-        get { liveStore.overview }
-        set { liveStore.overview = newValue }
+        get { liveState.overview }
+        set { liveState.overview = newValue }
     }
 
     var connections: ConnectionsSnapshot {
-        get { liveStore.connections }
-        set { liveStore.connections = newValue }
+        get { liveState.connections }
+        set { liveState.connections = newValue }
     }
 
     var logs: [LogEntry] {
-        get { logStore.entries }
-        set { logStore.entries = newValue }
+        get { liveState.logs }
+        set { liveState.logs = newValue }
     }
 
     var logLevel: LogLevel {
-        get { logStore.level }
-        set { logStore.level = newValue }
+        get { liveState.logLevel }
+        set { liveState.logLevel = newValue }
     }
 
     var selectedProfile: APIProfile? {
-        guard let selectedProfileID else {
-            return profiles.first
-        }
-        return profiles.first { $0.id == selectedProfileID } ?? profiles.first
+        profileStore.selectedProfile
     }
 
     var hasProfiles: Bool {
-        !profiles.isEmpty
+        profileStore.hasProfiles
     }
 
     var client: (any ProxyBackendClient)? {
@@ -208,52 +237,30 @@ final class AppModel: ObservableObject {
     var showsBackendErrorSpinner: Bool {
         isBackendErrorDebouncing && !isManualRefreshActive
     }
+}
 
+@MainActor
+extension AppModel {
     func loadProfiles() {
-        let data = defaults.data(forKey: Keys.profiles) ?? Data()
-        profiles = ProfileStore.decode(data)
-        if let storedID = defaults.string(forKey: Keys.selectedProfileID).flatMap(UUID.init(uuidString:)) {
-            selectedProfileID = storedID
-        } else {
-            selectedProfileID = profiles.first?.id
-        }
+        profileStore.loadProfiles()
     }
 
     func addProfile(_ profile: APIProfile) {
-        profiles.append(profile)
-        selectedProfileID = profile.id
-        saveProfiles()
+        profileStore.addProfile(profile)
         selectedTab = .proxies
     }
 
     func updateProfile(_ profile: APIProfile) {
-        guard let index = profiles.firstIndex(where: { $0.id == profile.id }) else {
-            addProfile(profile)
-            return
-        }
-        let oldProfile = profiles[index]
-        let wasSelected = selectedProfile?.id == profile.id
-        profiles[index] = profile
-        if wasSelected {
-            selectedProfileID = profile.id
-        }
-        saveProfiles()
-
-        guard wasSelected else { return }
-        if oldProfile.kind != profile.kind || oldProfile.baseURL != profile.baseURL {
+        let shouldReset = profileStore.updateProfile(profile)
+        if shouldReset {
             defaults.removeObject(forKey: cacheKey(profileID: profile.id))
             resetLoadedData()
         }
     }
 
     func deleteProfiles(at offsets: IndexSet) {
-        let previousSelectedProfileID = selectedProfileID
-        profiles.remove(atOffsets: offsets)
-        if !profiles.contains(where: { $0.id == selectedProfileID }) {
-            selectedProfileID = profiles.first?.id
-        }
-        saveProfiles()
-        if selectedProfileID != previousSelectedProfileID {
+        flushPendingCacheSave()
+        if profileStore.deleteProfiles(at: offsets) {
             resetLoadedData()
             loadCachedData()
         }
@@ -265,20 +272,18 @@ final class AppModel: ObservableObject {
     }
 
     func moveProfiles(from offsets: IndexSet, to destination: Int) {
-        profiles.move(fromOffsets: offsets, toOffset: destination)
-        saveProfiles()
+        profileStore.moveProfiles(from: offsets, to: destination)
     }
 
     func selectProfile(_ id: UUID?) {
-        selectedProfileID = id
-        defaults.set(id?.uuidString, forKey: Keys.selectedProfileID)
+        flushPendingCacheSave()
+        guard profileStore.selectProfile(id) else { return }
         resetLoadedData()
         loadCachedData()
     }
 
     func saveProfiles() {
-        defaults.set(ProfileStore.encode(profiles), forKey: Keys.profiles)
-        defaults.set(selectedProfileID?.uuidString, forKey: Keys.selectedProfileID)
+        profileStore.saveProfiles()
     }
 
     func testProfile(_ profile: APIProfile) async throws -> BackendOverview {
@@ -291,43 +296,49 @@ final class AppModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
-        async let versionValue = result { try await client.version() }
-        async let overviewValue = result { try await client.overview() }
-        async let proxiesValue = result { try await client.proxies() }
-        async let providersValue = result { try await client.proxyProviders() }
-        async let rulesValue = result { try await client.rules() }
-        async let ruleProvidersValue = result { try await client.ruleProviders() }
-        async let configValue = result { try await client.configs() }
-        async let modeValue = result { try await client.clashMode() }
-
         var outcome = RefreshOutcome()
-        outcome.merge(apply(await overviewValue) { applyOverviewStats($0) })
-        outcome.merge(apply(await versionValue) { applyVersion($0) })
-        outcome.merge(apply(await proxiesValue) { setProxyCollection($0) })
-        outcome.merge(apply(await providersValue) { proxyProviders = $0 })
-        outcome.merge(apply(await rulesValue) { rules = $0 })
-        outcome.merge(apply(await ruleProvidersValue) { ruleProviders = $0 })
-        outcome.merge(apply(await configValue) { applyConfigs($0) })
-        outcome.merge(apply(await modeValue) { clashMode = $0 })
+        await withTaskGroup(of: RefreshAllValue.self) { taskGroup in
+            taskGroup.addTask { .version(await backendResult { try await client.version() }) }
+            taskGroup.addTask { .overview(await backendResult { try await client.overview() }) }
+            taskGroup.addTask { .proxies(await backendResult { try await client.proxies() }) }
+            taskGroup.addTask { .proxyProviders(await backendResult { try await client.proxyProviders() }) }
+            taskGroup.addTask { .rules(await backendResult { try await client.rules() }) }
+            taskGroup.addTask { .ruleProviders(await backendResult { try await client.ruleProviders() }) }
+            taskGroup.addTask { .configs(await backendResult { try await client.configs() }) }
+            taskGroup.addTask { .mode(await backendResult { try await client.clashMode() }) }
+
+            for await value in taskGroup {
+                switch value {
+                case .version(let result):
+                    outcome.merge(apply(result) { applyVersion($0) })
+                case .overview(let result):
+                    outcome.merge(apply(result) { applyOverviewStats($0) })
+                case .proxies(let result):
+                    outcome.merge(apply(result) { setProxyCollection($0) })
+                case .proxyProviders(let result):
+                    outcome.merge(apply(result) { proxyProviders = $0 })
+                case .rules(let result):
+                    outcome.merge(apply(result) { rules = $0 })
+                case .ruleProviders(let result):
+                    outcome.merge(apply(result) { ruleProviders = $0 })
+                case .configs(let result):
+                    outcome.merge(apply(result) { applyConfigs($0) })
+                case .mode(let result):
+                    outcome.merge(apply(result) { clashMode = $0 })
+                }
+            }
+        }
         saveCachedDataIfUseful()
         await finishRefresh(outcome, source: source)
     }
 
-    func startAutoRefresh() {
+    func runAutoRefreshLoop() async {
         guard !isAutoRefreshSuspended else { return }
-        autoRefreshTask?.cancel()
-        autoRefreshTask = Task { [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(5))
-                guard !Task.isCancelled else { return }
-                await self?.refreshSelectedTab(source: .automatic)
-            }
+        while !Task.isCancelled {
+            try? await Task.sleep(for: .seconds(5))
+            guard !Task.isCancelled, !isAutoRefreshSuspended else { return }
+            await refreshSelectedTab(source: .automatic)
         }
-    }
-
-    func stopAutoRefresh() {
-        autoRefreshTask?.cancel()
-        autoRefreshTask = nil
     }
 
     func refreshSelectedTab(source: RefreshSource = .manual) async {
@@ -365,26 +376,33 @@ final class AppModel: ObservableObject {
         guard let client else { return }
         prepareRefresh(source: source)
 
-        async let proxyValue = result { try await client.proxies() }
-        async let providerValue = result { try await client.proxyProviders() }
-
         var outcome = RefreshOutcome()
         var didChange = false
 
-        switch await proxyValue {
-        case .success(let collection):
-            didChange = setProxyCollection(collection) || didChange
-            outcome.markBackendConnected()
-        case .failure(let error):
-            outcome.merge(RefreshOutcome(error: error))
-        }
+        await withTaskGroup(of: RefreshProxiesValue.self) { taskGroup in
+            taskGroup.addTask { .proxies(await backendResult { try await client.proxies() }) }
+            taskGroup.addTask { .proxyProviders(await backendResult { try await client.proxyProviders() }) }
 
-        switch await providerValue {
-        case .success(let providers):
-            didChange = setProxyProviders(providers) || didChange
-            outcome.markBackendConnected()
-        case .failure(let error):
-            outcome.merge(RefreshOutcome(error: error))
+            for await value in taskGroup {
+                switch value {
+                case .proxies(let result):
+                    switch result {
+                    case .success(let collection):
+                        didChange = setProxyCollection(collection) || didChange
+                        outcome.markBackendConnected()
+                    case .failure(let error):
+                        outcome.merge(RefreshOutcome(error: error))
+                    }
+                case .proxyProviders(let result):
+                    switch result {
+                    case .success(let providers):
+                        didChange = setProxyProviders(providers) || didChange
+                        outcome.markBackendConnected()
+                    case .failure(let error):
+                        outcome.merge(RefreshOutcome(error: error))
+                    }
+                }
+            }
         }
 
         if didChange {
@@ -396,14 +414,24 @@ final class AppModel: ObservableObject {
     func refreshRules(source: RefreshSource = .manual) async {
         guard let client else { return }
         prepareRefresh(source: source)
-        async let rulesValue = result { try await client.rules() }
-        async let ruleProvidersValue = result { try await client.ruleProviders() }
-        async let configValue = result { try await client.configs() }
 
         var outcome = RefreshOutcome()
-        outcome.merge(apply(await rulesValue) { rules = $0 })
-        outcome.merge(apply(await ruleProvidersValue) { ruleProviders = $0 })
-        outcome.merge(apply(await configValue) { applyConfigs($0) })
+        await withTaskGroup(of: RefreshRulesValue.self) { taskGroup in
+            taskGroup.addTask { .rules(await backendResult { try await client.rules() }) }
+            taskGroup.addTask { .ruleProviders(await backendResult { try await client.ruleProviders() }) }
+            taskGroup.addTask { .configs(await backendResult { try await client.configs() }) }
+
+            for await value in taskGroup {
+                switch value {
+                case .rules(let result):
+                    outcome.merge(apply(result) { rules = $0 })
+                case .ruleProviders(let result):
+                    outcome.merge(apply(result) { ruleProviders = $0 })
+                case .configs(let result):
+                    outcome.merge(apply(result) { applyConfigs($0) })
+                }
+            }
+        }
         if outcome.backendConnected {
             saveCachedDataIfUseful()
         }
@@ -433,8 +461,8 @@ final class AppModel: ObservableObject {
         let groupNames = proxyCollection.groups.map(\.name)
         guard !groupNames.isEmpty else { return }
 
-        isTestingProxyGroupDelays = true
-        defer { isTestingProxyGroupDelays = false }
+        proxyStore.isTestingProxyGroupDelays = true
+        defer { proxyStore.isTestingProxyGroupDelays = false }
 
         await progressActivityReporter.start(
             kind: .latencyTest,
@@ -614,155 +642,85 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func startLiveStreams() {
-        switch selectedTab {
-        case .connections:
-            startConnectionStream()
-            stopOverviewStreams()
-        case .more:
-            startConnectionStream()
-            startMemoryStream()
-            startTrafficStream()
-        case .proxies, .rule:
-            stopLiveStreams()
-        }
-    }
-
-    func stopLiveStreams() {
-        stopConnectionStream()
-        stopOverviewStreams()
-    }
-
-    private func stopOverviewStreams() {
-        stopMemoryStream()
-        stopTrafficStream()
-        flushPendingCacheSave()
-    }
-
     func isProxyGroupExpanded(_ groupName: String) -> Bool {
-        let key = proxyGroupExpandedKey(groupName)
-        guard let stored = defaults.object(forKey: key) as? Bool else { return true }
-        return stored
+        proxyStore.isProxyGroupExpanded(groupName, profileID: selectedProfileID)
     }
 
     func areAllProxyGroupsExpanded(_ groups: [ProxyItem]) -> Bool {
-        !groups.isEmpty && groups.allSatisfy { isProxyGroupExpanded($0.name) }
+        proxyStore.areAllProxyGroupsExpanded(groups, profileID: selectedProfileID)
     }
 
     func setProxyGroupExpanded(_ isExpanded: Bool, groupName: String) {
-        let key = proxyGroupExpandedKey(groupName)
-        if let stored = defaults.object(forKey: key) as? Bool, stored == isExpanded {
-            return
-        }
-        defaults.set(isExpanded, forKey: key)
-        proxyGroupExpansionRevision &+= 1
+        proxyStore.setProxyGroupExpanded(isExpanded, groupName: groupName, profileID: selectedProfileID)
     }
 
     func setAllProxyGroupsExpanded(_ isExpanded: Bool, groups: [ProxyItem]) {
-        guard !groups.isEmpty else { return }
-        for group in groups {
-            defaults.set(isExpanded, forKey: proxyGroupExpandedKey(group.name))
-        }
-        proxyGroupExpansionRevision &+= 1
+        proxyStore.setAllProxyGroupsExpanded(isExpanded, groups: groups, profileID: selectedProfileID)
     }
 
-    func startConnectionStream() {
-        connectionTask?.cancel()
+    func streamConnections() async {
         guard let client else { return }
-        connectionTask = Task { [weak self] in
-            do {
-                for try await snapshot in client.connectionEvents(interval: 1000) {
-                    guard let self else { return }
-                    markBackendConnected()
-                    updateConnections(snapshot)
-                }
-            } catch where error.isCancellation || Task.isCancelled {
-                return
-            } catch {
-                await self?.pollConnections(client: client)
+        defer { flushPendingCacheSave() }
+        do {
+            for try await snapshot in client.connectionEvents(interval: 1000) {
+                markBackendConnected()
+                updateConnections(snapshot)
             }
+        } catch where error.isCancellation || Task.isCancelled {
+            return
+        } catch {
+            await pollConnections(client: client)
         }
     }
 
-    func stopConnectionStream() {
-        connectionTask?.cancel()
-        connectionTask = nil
-    }
-
-    func startMemoryStream() {
-        memoryTask?.cancel()
+    func streamMemory() async {
         guard let client else { return }
-        memoryTask = Task { [weak self] in
-            do {
-                for try await snapshot in client.memoryEvents() {
-                    guard let self else { return }
-                    markBackendConnected()
-                    if let inuse = snapshot.inuse {
-                        updateMemory(inuse)
-                    }
+        defer { flushPendingCacheSave() }
+        do {
+            for try await snapshot in client.memoryEvents() {
+                markBackendConnected()
+                if let inuse = snapshot.inuse {
+                    updateMemory(inuse)
                 }
-            } catch where error.isCancellation || Task.isCancelled {
-                return
-            } catch {
-                await self?.pollOverviewStats(client: client)
             }
+        } catch where error.isCancellation || Task.isCancelled {
+            return
+        } catch {
+            await pollOverviewStats(client: client)
         }
     }
 
-    func stopMemoryStream() {
-        memoryTask?.cancel()
-        memoryTask = nil
-    }
-
-    func startTrafficStream() {
-        trafficTask?.cancel()
+    func streamTraffic() async {
         guard let client else { return }
-        trafficTask = Task { [weak self] in
-            do {
-                for try await snapshot in client.trafficEvents() {
-                    guard let self else { return }
-                    markBackendConnected()
-                    updateTraffic(upload: snapshot.up, download: snapshot.down)
-                }
-            } catch where error.isCancellation || Task.isCancelled {
-                return
-            } catch {
-                await self?.pollOverviewStats(client: client)
+        defer { flushPendingCacheSave() }
+        do {
+            for try await snapshot in client.trafficEvents() {
+                markBackendConnected()
+                updateTraffic(upload: snapshot.up, download: snapshot.down)
             }
+        } catch where error.isCancellation || Task.isCancelled {
+            return
+        } catch {
+            await pollOverviewStats(client: client)
         }
     }
 
-    func stopTrafficStream() {
-        trafficTask?.cancel()
-        trafficTask = nil
-    }
-
-    func startLogs() {
-        logTask?.cancel()
-        logStore.entries.removeAll()
+    func streamLogs(level: LogLevel) async {
+        liveState.logs.removeAll()
         guard let client else { return }
-        let level = logStore.level
-        logTask = Task { [weak self] in
-            do {
-                for try await entry in client.logs(level: level) {
-                    guard let self else { return }
-                    markBackendConnected()
-                    logStore.entries.append(entry)
-                    if logStore.entries.count > 400 {
-                        logStore.entries.removeFirst(logStore.entries.count - 400)
-                    }
+        do {
+            for try await entry in client.logs(level: level) {
+                markBackendConnected()
+                liveState.logs.append(entry)
+                if liveState.logs.count > 400 {
+                    liveState.logs.removeFirst(liveState.logs.count - 400)
                 }
-            } catch where error.isCancellation || Task.isCancelled {
-                return
-            } catch {
-                self?.beginBackendErrorDebounce(error.localizedDescription)
             }
+        } catch where error.isCancellation || Task.isCancelled {
+            return
+        } catch {
+            beginBackendErrorDebounce(error.localizedDescription)
         }
-    }
-
-    func stopLogs() {
-        logTask?.cancel()
-        logTask = nil
     }
 
     private func pollConnections(client: any ProxyBackendClient) async {

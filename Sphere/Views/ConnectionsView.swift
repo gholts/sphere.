@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct ConnectionsView: View {
-    @EnvironmentObject private var app: AppModel
-    @EnvironmentObject private var live: LiveBackendStore
+    @Environment(AppModel.self) private var app
+    @Environment(LiveState.self) private var live
     @State private var showSheet = false
 
     var body: some View {
@@ -35,8 +35,8 @@ struct ConnectionsView: View {
             }
             .sheet(isPresented: $showSheet) {
                 ConnectionsSheetView()
-                    .environmentObject(app)
-                    .environmentObject(live)
+                    .environment(app)
+                    .environment(live)
             }
         }
     }
@@ -52,8 +52,8 @@ struct ConnectionsView: View {
 
 struct ConnectionsSheetView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var app: AppModel
-    @EnvironmentObject private var live: LiveBackendStore
+    @Environment(AppModel.self) private var app
+    @Environment(LiveState.self) private var live
     @State private var filter = ConnectionFilter()
     @State private var filteredConnections: [ConnectionInfo] = []
 

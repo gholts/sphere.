@@ -2,8 +2,8 @@ import SwiftUI
 import UIKit
 
 struct MoreView: View {
-    @EnvironmentObject private var app: AppModel
-    @EnvironmentObject private var live: LiveBackendStore
+    @Environment(AppModel.self) private var app
+    @Environment(LiveState.self) private var live
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var profileForm: ProfileFormPresentation?
     @State private var coreUpdateDialog: CoreUpdateDialog?
@@ -96,7 +96,8 @@ struct MoreView: View {
             .backendPageToolbar(tab: .more)
             .sheet(item: $profileForm) { form in
                 ProfileWizardView(editingProfile: form.editingProfile, canDismiss: true)
-                    .environmentObject(app)
+                    .environment(app)
+                    .environment(live)
             }
             .sheet(item: $coreUpdateDialog) { dialog in
                 CoreUpdateDialogView(dialog: dialog)

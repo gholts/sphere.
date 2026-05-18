@@ -2,27 +2,28 @@ import SwiftUI
 import UIKit
 
 struct RootView: View {
-    @StateObject private var app = AppModel()
+    @State private var app = AppModel()
 
     var body: some View {
         Group {
             if app.hasProfiles {
                 AppTabView()
-                    .environmentObject(app)
-                    .environmentObject(app.liveStore)
-                    .environmentObject(app.logStore)
+                    .environment(app)
+                    .environment(app.liveState)
             } else {
                 ProfileWizardView()
-                    .environmentObject(app)
+                    .environment(app)
+                    .environment(app.liveState)
             }
         }
     }
 }
 
 struct AppTabView: View {
-    @EnvironmentObject private var app: AppModel
+    @Environment(AppModel.self) private var app
 
     var body: some View {
+        @Bindable var app = app
         TabView(selection: $app.selectedTab) {
             ForEach(AppTab.allCases) { tab in
                 Tab(tab.title, systemImage: tab.symbol, value: tab) {
@@ -53,21 +54,36 @@ private struct AppTabContent: View {
 }
 
 private struct VisibleRefreshLifecycle: ViewModifier {
-    @EnvironmentObject private var app: AppModel
+    @Environment(AppModel.self) private var app
 
     func body(content: Content) -> some View {
         content
             .task(id: VisibleRefreshKey(profileID: app.selectedProfileID, tab: app.selectedTab)) {
-                app.stopAutoRefresh()
-                app.startLiveStreams()
                 await app.refreshSelectedTab(source: .automatic)
-                if !Task.isCancelled {
-                    app.startAutoRefresh()
-                }
+            }
+            .task(id: AutoRefreshKey(profileID: app.selectedProfileID, tab: app.selectedTab, suspended: app.isAutoRefreshSuspended)) {
+                await app.runAutoRefreshLoop()
+            }
+            .task(id: LiveStreamKey(profileID: app.selectedProfileID, tab: app.selectedTab, suspended: app.isAutoRefreshSuspended, stream: .connections)) {
+                guard !app.isAutoRefreshSuspended, app.selectedTab == .connections || app.selectedTab == .more else { return }
+                await app.streamConnections()
+            }
+            .task(id: LiveStreamKey(profileID: app.selectedProfileID, tab: app.selectedTab, suspended: app.isAutoRefreshSuspended, stream: .memory)) {
+                guard !app.isAutoRefreshSuspended, app.selectedTab == .more else { return }
+                await app.streamMemory()
+            }
+            .task(id: LiveStreamKey(profileID: app.selectedProfileID, tab: app.selectedTab, suspended: app.isAutoRefreshSuspended, stream: .traffic)) {
+                guard !app.isAutoRefreshSuspended, app.selectedTab == .more else { return }
+                await app.streamTraffic()
+            }
+            .task(id: app.backendErrorDebounceRevision) {
+                await app.runBackendErrorDebounce()
+            }
+            .task(id: app.cacheSaveRevision) {
+                await app.runPendingCacheSave()
             }
             .onDisappear {
-                app.stopLiveStreams()
-                app.stopAutoRefresh()
+                app.flushPendingCacheSave()
             }
     }
 }
@@ -75,4 +91,23 @@ private struct VisibleRefreshLifecycle: ViewModifier {
 private struct VisibleRefreshKey: Equatable {
     var profileID: UUID?
     var tab: AppTab
+}
+
+private struct AutoRefreshKey: Equatable {
+    var profileID: UUID?
+    var tab: AppTab
+    var suspended: Bool
+}
+
+private struct LiveStreamKey: Equatable {
+    enum Stream {
+        case connections
+        case memory
+        case traffic
+    }
+
+    var profileID: UUID?
+    var tab: AppTab
+    var suspended: Bool
+    var stream: Stream
 }

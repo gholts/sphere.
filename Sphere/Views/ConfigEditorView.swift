@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ConfigEditorView: View {
-    @EnvironmentObject private var app: AppModel
+    @Environment(AppModel.self) private var app
     @State private var draft: [String: String] = [:]
     @State private var isLoadingConfig = false
 

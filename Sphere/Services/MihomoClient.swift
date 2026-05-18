@@ -1,5 +1,21 @@
 import Foundation
 
+private enum MihomoOverviewValue: Sendable {
+    case traffic(Result<TrafficSnapshot, Error>)
+    case memory(Result<Int?, Error>)
+    case connections(Result<ConnectionsSnapshot, Error>)
+}
+
+nonisolated private func backendResult<T: Sendable>(
+    _ operation: @Sendable () async throws -> T
+) async -> Result<T, Error> {
+    do {
+        return .success(try await operation())
+    } catch {
+        return .failure(error)
+    }
+}
+
 nonisolated struct MihomoClient: ProxyBackendClient {
     var profile: APIProfile
 
@@ -31,19 +47,35 @@ nonisolated struct MihomoClient: ProxyBackendClient {
     }
 
     func overview() async -> BackendOverview {
-        async let trafficValue = traffic()
-        async let memoryValue = memory()
-        async let connectionValue = connections()
+        var traffic: TrafficSnapshot?
+        var memory: Int?
+        var connections: ConnectionsSnapshot?
 
-        let traffic = try? await trafficValue
-        let memory = try? await memoryValue
-        let connections = try? await connectionValue
+        await withTaskGroup(of: MihomoOverviewValue.self) { taskGroup in
+            taskGroup.addTask { .traffic(await backendResult { try await self.traffic() }) }
+            taskGroup.addTask { .memory(await backendResult { try await self.memory() }) }
+            taskGroup.addTask { .connections(await backendResult { try await self.connections() }) }
+
+            for await value in taskGroup {
+                switch value {
+                case .traffic(.success(let snapshot)):
+                    traffic = snapshot
+                case .memory(.success(let inuse)):
+                    memory = inuse
+                case .connections(.success(let snapshot)):
+                    connections = snapshot
+                case .traffic(.failure), .memory(.failure), .connections(.failure):
+                    break
+                }
+            }
+        }
+
         return BackendOverview(
             version: "Unknown",
             uptime: nil,
             memoryBytes: memory,
-            uploadBytesPerSecond: traffic?.upload,
-            downloadBytesPerSecond: traffic?.download,
+            uploadBytesPerSecond: traffic?.up,
+            downloadBytesPerSecond: traffic?.down,
             activeConnections: connections?.connections.count
         )
     }
@@ -156,9 +188,8 @@ nonisolated struct MihomoClient: ProxyBackendClient {
         try await request(path: "/version", response: MihomoVersionPayload.self).version
     }
 
-    private func traffic() async throws -> (upload: Int, download: Int) {
-        let result = try await request(path: "/traffic", response: TrafficSnapshot.self)
-        return (result.up, result.down)
+    private func traffic() async throws -> TrafficSnapshot {
+        try await request(path: "/traffic", response: TrafficSnapshot.self)
     }
 
     private func memory() async throws -> Int? {

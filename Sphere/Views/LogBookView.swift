@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct LogBookView: View {
-    @EnvironmentObject private var app: AppModel
-    @EnvironmentObject private var logs: LogStore
+    @Environment(AppModel.self) private var app
+    @Environment(LiveState.self) private var logs
 
     var body: some View {
         List {
@@ -16,11 +16,11 @@ struct LogBookView: View {
             }
 
             Section("Logs") {
-                if logs.entries.isEmpty {
+                if logs.logs.isEmpty {
                     Text("Waiting for logs")
                         .foregroundStyle(.secondary)
                 } else {
-                    ForEach(logs.entries) { entry in
+                    ForEach(logs.logs) { entry in
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
                                 Text(entry.type.uppercased())
@@ -39,20 +39,16 @@ struct LogBookView: View {
             }
         }
         .navigationTitle("Log Book")
-        .onAppear {
-            app.startLogs()
-        }
-        .onDisappear {
-            app.stopLogs()
+        .task(id: LogStreamKey(profileID: app.selectedProfileID, level: logs.logLevel)) {
+            await app.streamLogs(level: logs.logLevel)
         }
     }
 
     private var levelBinding: Binding<LogLevel> {
         Binding(
-            get: { logs.level },
+            get: { logs.logLevel },
             set: {
-                logs.level = $0
-                app.startLogs()
+                logs.logLevel = $0
             }
         )
     }
@@ -69,4 +65,9 @@ struct LogBookView: View {
             return .secondary
         }
     }
+}
+
+private struct LogStreamKey: Equatable {
+    var profileID: UUID?
+    var level: LogLevel
 }

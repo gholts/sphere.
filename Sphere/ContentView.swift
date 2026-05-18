@@ -19,9 +19,8 @@ struct ContentView_Previews: PreviewProvider {
         Group {
             ContentView()
             AppTabView()
-                .environmentObject(app)
-                .environmentObject(app.liveStore)
-                .environmentObject(app.logStore)
+                .environment(app)
+                .environment(app.liveState)
         }
     }
 }

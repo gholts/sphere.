@@ -100,6 +100,8 @@ nonisolated enum BackendConfigCatalog {
             return mihomoFields
         case .singbox:
             return singboxFields
+        case .none:
+            return []
         }
     }
 
@@ -125,6 +127,8 @@ nonisolated enum BackendConfigCatalog {
             ]
         case .singbox:
             return ["Clash API", "Runtime", "Access"]
+        case .none:
+            return []
         }
     }
 

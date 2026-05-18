@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct RuleView: View {
-    @EnvironmentObject private var app: AppModel
+    @Environment(AppModel.self) private var app
     @State private var refreshingRuleSetNames: Set<String> = []
 
     var body: some View {
