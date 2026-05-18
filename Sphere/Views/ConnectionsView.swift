@@ -45,7 +45,7 @@ struct ConnectionsView: View {
         [
             StatMetric(title: "Active", value: "\(live.connections.connections.count)"),
             StatMetric(title: "Uploaded", value: ByteFormat.bytes(live.connections.uploadTotal)),
-            StatMetric(title: "Downloaded", value: ByteFormat.bytes(live.connections.downloadTotal))
+            StatMetric(title: "Downloaded", value: ByteFormat.bytes(live.connections.downloadTotal)),
         ]
     }
 }

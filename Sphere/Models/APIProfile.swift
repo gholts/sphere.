@@ -1,9 +1,8 @@
 import Foundation
 
-enum BackendKind: String, Codable, CaseIterable, Identifiable, Sendable {
+nonisolated enum BackendKind: String, Codable, CaseIterable, Identifiable, Sendable {
     case mihomo
     case singbox
-    case surge
 
     var id: String { rawValue }
 
@@ -13,8 +12,6 @@ enum BackendKind: String, Codable, CaseIterable, Identifiable, Sendable {
             return "Mihomo"
         case .singbox:
             return "Singbox"
-        case .surge:
-            return "Surge"
         }
     }
 
@@ -26,7 +23,7 @@ enum BackendKind: String, Codable, CaseIterable, Identifiable, Sendable {
         self == .mihomo
     }
 
-    static func detected(fromVersion version: String) -> BackendKind? {
+    static func detected(fromVersion version: String) -> Self? {
         let lowercased = version.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !lowercased.isEmpty else { return nil }
         if lowercased.contains("sing-box") || lowercased.contains("singbox") {
@@ -35,14 +32,11 @@ enum BackendKind: String, Codable, CaseIterable, Identifiable, Sendable {
         if lowercased.contains("mihomo") || lowercased.contains("meta") || lowercased.contains("clash") {
             return .mihomo
         }
-        if lowercased.contains("surge") {
-            return .surge
-        }
         return nil
     }
 }
 
-struct APIProfile: Identifiable, Codable, Equatable, Sendable {
+nonisolated struct APIProfile: Identifiable, Codable, Equatable, Sendable {
     var id: UUID
     var name: String
     var kind: BackendKind
@@ -68,7 +62,7 @@ struct APIProfile: Identifiable, Codable, Equatable, Sendable {
     }
 }
 
-enum URLNormalizer {
+nonisolated enum URLNormalizer {
     static func normalizedBaseURL(_ rawValue: String) -> String {
         var value = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
         if value.isEmpty {
@@ -77,14 +71,14 @@ enum URLNormalizer {
         if !value.contains("://") {
             value = "http://" + value
         }
-        while value.hasSuffix("/") && !value.hasSuffix("://") {
+        while value.hasSuffix("/"), !value.hasSuffix("://") {
             value.removeLast()
         }
         return value
     }
 }
 
-enum ProfileStore {
+nonisolated enum ProfileStore {
     static func decode(_ data: Data) -> [APIProfile] {
         (try? JSONDecoder().decode([APIProfile].self, from: data)) ?? []
     }

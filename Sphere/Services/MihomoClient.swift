@@ -1,6 +1,6 @@
 import Foundation
 
-struct MihomoClient: ProxyBackendClient {
+nonisolated struct MihomoClient: ProxyBackendClient {
     var profile: APIProfile
 
     private let session: URLSession
@@ -30,7 +30,7 @@ struct MihomoClient: ProxyBackendClient {
         return result
     }
 
-    func overview() async throws -> BackendOverview {
+    func overview() async -> BackendOverview {
         async let trafficValue = traffic()
         async let memoryValue = memory()
         async let connectionValue = connections()
@@ -83,7 +83,7 @@ struct MihomoClient: ProxyBackendClient {
             path: "/proxies/\(escaped(proxy))/delay",
             query: [
                 URLQueryItem(name: "url", value: url),
-                URLQueryItem(name: "timeout", value: String(timeout))
+                URLQueryItem(name: "timeout", value: String(timeout)),
             ],
             response: ProxyDelayPayload.self
         ).delay
@@ -94,7 +94,7 @@ struct MihomoClient: ProxyBackendClient {
             path: "/group/\(escaped(group))/delay",
             query: [
                 URLQueryItem(name: "url", value: url),
-                URLQueryItem(name: "timeout", value: String(timeout))
+                URLQueryItem(name: "timeout", value: String(timeout)),
             ],
             response: [String: Int].self
         )
@@ -165,7 +165,7 @@ struct MihomoClient: ProxyBackendClient {
         try await request(path: "/memory", response: MemorySnapshot.self).inuse
     }
 
-    private func request<T: Decodable>(path: String, query: [URLQueryItem] = [], response: T.Type) async throws -> T {
+    private func request<T: Decodable>(path: String, query: [URLQueryItem] = [], response _: T.Type) async throws -> T {
         let request = try URLRequestFactory.request(profile: profile, path: path, query: query, timeoutInterval: requestTimeout)
         let data = try await data(for: request)
         return try decoder.decode(T.self, from: data)
@@ -187,7 +187,7 @@ struct MihomoClient: ProxyBackendClient {
         return data.isEmpty ? Data("{}".utf8) : data
     }
 
-    private func webSocketStream<T: Decodable>(
+    private func webSocketStream<T: Decodable & Sendable>(
         path: String,
         query: [URLQueryItem],
         response: T.Type
@@ -210,7 +210,7 @@ struct MihomoClient: ProxyBackendClient {
                             @unknown default:
                                 continue
                             }
-                            continuation.yield(try decoder.decode(T.self, from: data))
+                            continuation.yield(try JSONDecoder().decode(response, from: data))
                         }
                     } catch {
                         continuation.finish(throwing: error)
@@ -244,5 +244,4 @@ struct MihomoClient: ProxyBackendClient {
         allowed.remove(charactersIn: ":#[]@!$&'()*+,;=/%?")
         return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
     }
-
 }

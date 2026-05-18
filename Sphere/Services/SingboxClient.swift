@@ -1,6 +1,6 @@
 import Foundation
 
-struct SingboxClient: ProxyBackendClient {
+nonisolated struct SingboxClient: ProxyBackendClient {
     var profile: APIProfile
 
     private let session: URLSession
@@ -30,7 +30,7 @@ struct SingboxClient: ProxyBackendClient {
         return result
     }
 
-    func overview() async throws -> BackendOverview {
+    func overview() async -> BackendOverview {
         let snapshot = try? await connections()
         return BackendOverview(
             version: "Unknown",
@@ -77,7 +77,7 @@ struct SingboxClient: ProxyBackendClient {
             path: "/proxies/\(escaped(proxy))/delay",
             query: [
                 URLQueryItem(name: "url", value: url),
-                URLQueryItem(name: "timeout", value: String(timeout))
+                URLQueryItem(name: "timeout", value: String(timeout)),
             ],
             response: ProxyDelayPayload.self
         ).delay
@@ -88,7 +88,7 @@ struct SingboxClient: ProxyBackendClient {
             path: "/group/\(escaped(group))/delay",
             query: [
                 URLQueryItem(name: "url", value: url),
-                URLQueryItem(name: "timeout", value: String(timeout))
+                URLQueryItem(name: "timeout", value: String(timeout)),
             ],
             response: [String: Int].self
         )
@@ -98,7 +98,7 @@ struct SingboxClient: ProxyBackendClient {
         try await request(path: "/providers/proxies", response: ProviderCollection<ProxyProvider>.self).providers.visibleProxyProviders
     }
 
-    func refreshProxyProvider(_ name: String) async throws {
+    func refreshProxyProvider(_ name: String) {
         _ = name
     }
 
@@ -110,7 +110,7 @@ struct SingboxClient: ProxyBackendClient {
         try await request(path: "/providers/rules", response: ProviderCollection<RuleProvider>.self).providers
     }
 
-    func refreshRuleProvider(_ name: String) async throws {
+    func refreshRuleProvider(_ name: String) {
         _ = name
     }
 
@@ -126,7 +126,7 @@ struct SingboxClient: ProxyBackendClient {
         try await requestNoBody(path: "/connections", method: "DELETE")
     }
 
-    func upgradeCore(channel: CoreUpdateChannel) async throws {
+    func upgradeCore(channel _: CoreUpdateChannel) throws {
         throw BackendError.unsupportedBackend(profile.kind.title)
     }
 
@@ -150,7 +150,7 @@ struct SingboxClient: ProxyBackendClient {
         try await request(path: "/version", response: MihomoVersionPayload.self).version
     }
 
-    private func request<T: Decodable>(path: String, query: [URLQueryItem] = [], response: T.Type) async throws -> T {
+    private func request<T: Decodable>(path: String, query: [URLQueryItem] = [], response _: T.Type) async throws -> T {
         let request = try URLRequestFactory.request(profile: profile, path: path, query: query, timeoutInterval: requestTimeout)
         let data = try await data(for: request)
         return try decoder.decode(T.self, from: data)
@@ -172,7 +172,7 @@ struct SingboxClient: ProxyBackendClient {
         return data.isEmpty ? Data("{}".utf8) : data
     }
 
-    private func webSocketStream<T: Decodable>(
+    private func webSocketStream<T: Decodable & Sendable>(
         path: String,
         query: [URLQueryItem],
         response: T.Type
@@ -195,7 +195,7 @@ struct SingboxClient: ProxyBackendClient {
                             @unknown default:
                                 continue
                             }
-                            continuation.yield(try decoder.decode(T.self, from: data))
+                            continuation.yield(try JSONDecoder().decode(response, from: data))
                         }
                     } catch {
                         continuation.finish(throwing: error)

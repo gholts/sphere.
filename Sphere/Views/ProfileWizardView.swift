@@ -134,7 +134,7 @@ struct ProfileWizardView: View {
         editingProfile == nil ? "Save Profile" : "Save Changes"
     }
 
-    private func test() async {
+    func test() async {
         guard !isTesting else { return }
         let startedAt = Date()
         isTesting = true
@@ -156,7 +156,7 @@ struct ProfileWizardView: View {
     private func waitForMinimumTestingIndicatorDuration(since startedAt: Date) async {
         let remaining = minimumTestingIndicatorDuration - Date().timeIntervalSince(startedAt)
         guard remaining > 0 else { return }
-        try? await Task.sleep(for: .milliseconds(Int(remaining * 1_000)))
+        try? await Task.sleep(for: .milliseconds(Int(remaining * 1000)))
     }
 
     private func saveProfile() {
@@ -208,7 +208,7 @@ private struct ProfileTestResult: Equatable {
 }
 
 enum CoreVersionDisplay {
-    private static let coreNameTokens = ["mihomo", "sing-box", "singbox", "clash", "surge"]
+    private static let coreNameTokens = ["mihomo", "sing-box", "singbox", "clash"]
 
     static func successMessage(for version: String, kind: BackendKind) -> String {
         "OK: \(coreAndVersion(for: version, kind: kind))"

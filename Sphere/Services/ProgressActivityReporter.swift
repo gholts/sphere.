@@ -1,4 +1,4 @@
-import ActivityKit
+@preconcurrency import ActivityKit
 import Foundation
 
 @MainActor
@@ -31,12 +31,13 @@ enum ProgressActivityFractions {
 }
 
 struct NoopProgressActivityReporter: ProgressActivityReporting {
-    func start(kind: SphereProgressActivityKind, title: String, detail: String, fraction: Double) async {}
-    func update(title: String, detail: String, fraction: Double) async {}
-    func finish(status: SphereProgressActivityStatus, title: String, detail: String) async {}
+    func start(kind _: SphereProgressActivityKind, title _: String, detail _: String, fraction _: Double) {}
+    func update(title _: String, detail _: String, fraction _: Double) {}
+    func finish(status _: SphereProgressActivityStatus, title _: String, detail _: String) {}
 }
 
 enum ProgressActivityReporterFactory {
+    @MainActor
     static func makeDefault() -> any ProgressActivityReporting {
         if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
             return NoopProgressActivityReporter()

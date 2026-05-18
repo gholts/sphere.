@@ -255,7 +255,7 @@ struct AdaptiveStatRows: View {
     private var columns: [GridItem] {
         [
             GridItem(.flexible(), spacing: 12),
-            GridItem(.flexible(), spacing: 12)
+            GridItem(.flexible(), spacing: 12),
         ]
     }
 

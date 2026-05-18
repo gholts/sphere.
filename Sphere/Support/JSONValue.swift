@@ -1,8 +1,8 @@
 import Foundation
 
-enum JSONValue: Codable, Hashable, Sendable {
-    case object([String: JSONValue])
-    case array([JSONValue])
+nonisolated enum JSONValue: Codable, Hashable, Sendable {
+    case object([String: Self])
+    case array([Self])
     case string(String)
     case number(Double)
     case bool(Bool)
@@ -39,20 +39,20 @@ enum JSONValue: Codable, Hashable, Sendable {
 
     init(from decoder: Decoder) throws {
         if let object = try? decoder.container(keyedBy: DynamicCodingKey.self) {
-            var values: [String: JSONValue] = [:]
+            var values: [String: Self] = [:]
             values.reserveCapacity(object.allKeys.count)
             for key in object.allKeys {
-                values[key.stringValue] = try object.decode(JSONValue.self, forKey: key)
+                values[key.stringValue] = try object.decode(Self.self, forKey: key)
             }
             self = .object(values)
             return
         }
 
         if var array = try? decoder.unkeyedContainer() {
-            var values: [JSONValue] = []
+            var values: [Self] = []
             values.reserveCapacity(array.count ?? 0)
             while !array.isAtEnd {
-                values.append(try array.decode(JSONValue.self))
+                values.append(try array.decode(Self.self))
             }
             self = .array(values)
             return
@@ -91,7 +91,7 @@ enum JSONValue: Codable, Hashable, Sendable {
     }
 }
 
-enum JSONScalarParser {
+nonisolated enum JSONScalarParser {
     static func parse(_ text: String, fallback: JSONValue) -> JSONValue {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         switch fallback {

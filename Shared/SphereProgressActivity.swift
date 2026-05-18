@@ -1,9 +1,9 @@
 import ActivityKit
 import Foundation
 
-enum SphereProgressActivityKind: String, Codable, Hashable, Sendable {
-    case coreUpdate
-    case latencyTest
+nonisolated enum SphereProgressActivityKind: String, Codable, Hashable, Sendable {
+    case coreUpdate = "core_update"
+    case latencyTest = "latency_test"
 
     var title: String {
         switch self {
@@ -24,13 +24,13 @@ enum SphereProgressActivityKind: String, Codable, Hashable, Sendable {
     }
 }
 
-enum SphereProgressActivityStatus: String, Codable, Hashable, Sendable {
+nonisolated enum SphereProgressActivityStatus: String, Codable, Hashable, Sendable {
     case running
     case succeeded
     case failed
 }
 
-struct SphereProgressActivityAttributes: ActivityAttributes {
+nonisolated struct SphereProgressActivityAttributes: ActivityAttributes, Sendable {
     struct ContentState: Codable, Hashable, Sendable {
         var title: String
         var detail: String

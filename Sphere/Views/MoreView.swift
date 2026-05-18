@@ -12,11 +12,9 @@ struct MoreView: View {
         NavigationStack {
             List {
                 Section("Backend") {
-                    if !usesIPadSidebar {
-                        Picker("Profile", selection: profileBinding) {
-                            ForEach(app.profiles) { profile in
-                                Text(profile.name).tag(Optional(profile.id))
-                            }
+                    Picker("Profile", selection: profileBinding) {
+                        ForEach(app.profiles) { profile in
+                            Text(profile.name).tag(Optional(profile.id))
                         }
                     }
                     
@@ -26,7 +24,7 @@ struct MoreView: View {
                         Label("Add Profile", systemImage: "plus.circle")
                     }
                 }
-
+                
                 Section("Overview") {
                     Picker(selection: modeBinding) {
                         ForEach(ClashMode.allCases) { mode in
@@ -36,10 +34,10 @@ struct MoreView: View {
                         Text("Mode")
                             .foregroundStyle(.secondary)
                     }
-
+                    
                     OverviewRows(overview: live.overview)
                 }
-
+                
                 if canUpdateCore {
                     Section("Update Core") {
                         ForEach(CoreUpdateChannel.allCases) { channel in
@@ -56,45 +54,44 @@ struct MoreView: View {
                         }
                     }
                 }
-
+                
                 Section("Tools") {
                     NavigationLink {
                         ConfigEditorView()
                     } label: {
                         Label("Configuration", systemImage: "slider.horizontal.3")
                     }
-
+                    
                     NavigationLink {
                         LogBookView()
                     } label: {
                         Label("Log Book", systemImage: "doc.text.magnifyingglass")
                     }
                 }
-
-                if !usesIPadSidebar {
-                    Section("Profiles") {
-                        ForEach(app.profiles) { profile in
-                            Button {
-                                profileForm = .edit(profile)
-                            } label: {
-                                HStack {
-                                    VStack(alignment: .leading) {
-                                        Text(profile.name)
-                                        Text("\(profile.kind.title) · \(profile.baseURL)")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
+                
+                Section("Profiles") {
+                    ForEach(app.profiles) { profile in
+                        Button {
+                            profileForm = .edit(profile)
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text(profile.name)
+                                    Text("\(profile.kind.title) · \(profile.baseURL)")
                                         .font(.caption)
-                                        .foregroundStyle(.tertiary)
+                                        .foregroundStyle(.secondary)
                                 }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
                             }
-                            .foregroundStyle(.primary)
                         }
-                        .onDelete(perform: app.deleteProfiles)
+                        .foregroundStyle(.primary)
                     }
+                    .onDelete(perform: app.deleteProfiles)
                 }
+                
             }
             .backendPageToolbar(tab: .more)
             .sheet(item: $profileForm) { form in
@@ -126,10 +123,6 @@ struct MoreView: View {
 
     private var canUpdateCore: Bool {
         app.selectedProfile?.kind == .mihomo && !live.overview.version.localizedCaseInsensitiveContains("sing-box")
-    }
-
-    private var usesIPadSidebar: Bool {
-        UIDevice.current.userInterfaceIdiom == .pad && horizontalSizeClass == .regular
     }
 
     private func startCoreUpdate(channel: CoreUpdateChannel) {
@@ -255,7 +248,7 @@ struct OverviewRows: View {
             StatMetric(title: "Memory", value: ByteFormat.memoryBytes(overview.memoryBytes)),
             StatMetric(title: "Upload", value: ByteFormat.speedBytes(overview.uploadBytesPerSecond)),
             StatMetric(title: "Download", value: ByteFormat.speedBytes(overview.downloadBytesPerSecond)),
-            StatMetric(title: "Active Connections", value: overview.activeConnections.map(String.init) ?? "n/a")
+            StatMetric(title: "Active Connections", value: overview.activeConnections.map(String.init) ?? "n/a"),
         ])
     }
 }

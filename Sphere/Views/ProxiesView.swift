@@ -10,7 +10,7 @@ struct ProxiesView: View {
             GridItem(
                 .adaptive(minimum: horizontalSizeClass == .regular ? 180 : 150, maximum: 280),
                 spacing: 8
-            )
+            ),
         ]
     }
 
@@ -198,7 +198,7 @@ struct ProxyProviderRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                HStack() {
+                HStack {
                     Text(verbatim: provider.name.backendNameForDisplay)
                     Text(provider.vehicleType ?? provider.type ?? "Provider")
                         .font(.caption)

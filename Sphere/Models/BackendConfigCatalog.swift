@@ -1,12 +1,12 @@
 import Foundation
 
-struct BackendConfigSection: Identifiable, Equatable, Sendable {
+nonisolated struct BackendConfigSection: Identifiable, Equatable, Sendable {
     var id: String { title }
     var title: String
     var fields: [BackendConfigField]
 }
 
-struct BackendConfigField: Identifiable, Equatable, Sendable {
+nonisolated struct BackendConfigField: Identifiable, Equatable, Sendable {
     var id: String { path.joined(separator: ".") }
     var section: String
     var title: String
@@ -21,7 +21,7 @@ struct BackendConfigField: Identifiable, Equatable, Sendable {
     }
 }
 
-enum BackendConfigControl: Equatable, Sendable {
+nonisolated enum BackendConfigControl: Equatable, Sendable {
     case toggle
     case number
     case text
@@ -81,7 +81,7 @@ enum BackendConfigControl: Equatable, Sendable {
     }
 }
 
-enum BackendConfigCatalog {
+nonisolated enum BackendConfigCatalog {
     static func sections(for kind: BackendKind?, configs: [String: JSONValue]) -> [BackendConfigSection] {
         let knownFields = fields(for: kind)
         let visibleKnownFields = knownFields.filter { configs.value(at: $0.path) != nil }
@@ -100,8 +100,6 @@ enum BackendConfigCatalog {
             return mihomoFields
         case .singbox:
             return singboxFields
-        case .surge, nil:
-            return []
         }
     }
 
@@ -123,12 +121,10 @@ enum BackendConfigCatalog {
                 "TLS",
                 "Experimental",
                 "NTP",
-                "Tunnels"
+                "Tunnels",
             ]
         case .singbox:
             return ["Clash API", "Runtime", "Access"]
-        case .surge, nil:
-            return []
         }
     }
 
@@ -284,7 +280,7 @@ enum BackendConfigCatalog {
         BackendConfigField(section: "NTP", title: "Port", path: "ntp.port", control: .number),
         BackendConfigField(section: "NTP", title: "Interval", path: "ntp.interval", control: .number),
 
-        BackendConfigField(section: "Tunnels", title: "Tunnels", path: "tunnels", control: .json)
+        BackendConfigField(section: "Tunnels", title: "Tunnels", path: "tunnels", control: .json),
     ]
 
     private static let singboxFields: [BackendConfigField] = [
@@ -298,18 +294,18 @@ enum BackendConfigCatalog {
         BackendConfigField(section: "Runtime", title: "Default Mode", path: "default_mode", control: .picker(["Rule", "Global", "Direct"])),
 
         BackendConfigField(section: "Access", title: "Allowed Origins", path: "access_control_allow_origin", control: .stringList),
-        BackendConfigField(section: "Access", title: "Allow Private Network", path: "access_control_allow_private_network", control: .toggle)
+        BackendConfigField(section: "Access", title: "Allow Private Network", path: "access_control_allow_private_network", control: .toggle),
     ]
 }
 
 extension JSONValue {
-    func value(at path: ArraySlice<String>) -> JSONValue? {
+    nonisolated func value(at path: ArraySlice<String>) -> JSONValue? {
         guard let key = path.first else { return self }
         guard case .object(let values) = self else { return nil }
         return values[key]?.value(at: path.dropFirst())
     }
 
-    var stringListText: [String] {
+    nonisolated var stringListText: [String] {
         switch self {
         case .array(let values):
             return values.map(\.displayText)
@@ -322,7 +318,7 @@ extension JSONValue {
         }
     }
 
-    var prettyJSONText: String {
+    nonisolated var prettyJSONText: String {
         guard let data = try? JSONEncoder().encode(self),
               let object = try? JSONSerialization.jsonObject(with: data),
               let prettyData = try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys]),
@@ -333,7 +329,7 @@ extension JSONValue {
         return text
     }
 
-    static func parseJSON(_ text: String) -> JSONValue? {
+    nonisolated static func parseJSON(_ text: String) -> JSONValue? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, let data = trimmed.data(using: .utf8) else { return nil }
         return try? JSONDecoder().decode(JSONValue.self, from: data)
@@ -341,13 +337,13 @@ extension JSONValue {
 }
 
 extension Dictionary where Key == String, Value == JSONValue {
-    func value(at path: [String]) -> JSONValue? {
+    nonisolated func value(at path: [String]) -> JSONValue? {
         guard let key = path.first else { return nil }
         guard let value = self[key] else { return nil }
         return value.value(at: path.dropFirst())
     }
 
-    mutating func mergeJSONPatch(_ patch: [String: JSONValue]) {
+    nonisolated mutating func mergeJSONPatch(_ patch: [String: JSONValue]) {
         for (key, value) in patch {
             if case .object(let current)? = self[key],
                case .object(let incoming) = value {
@@ -360,7 +356,7 @@ extension Dictionary where Key == String, Value == JSONValue {
         }
     }
 
-    mutating func mergeConfigPatch(path: [String], value: JSONValue, originals: [String: JSONValue]) {
+    nonisolated mutating func mergeConfigPatch(path: [String], value: JSONValue, originals: [String: JSONValue]) {
         guard let rootKey = path.first else { return }
         guard path.count > 1 else {
             self[rootKey] = value
@@ -381,7 +377,7 @@ extension Dictionary where Key == String, Value == JSONValue {
         self[rootKey] = .object(rootValues)
     }
 
-    static func jsonPatch(path: [String], value: JSONValue) -> [String: JSONValue] {
+    nonisolated static func jsonPatch(path: [String], value: JSONValue) -> [String: JSONValue] {
         guard let key = path.first else { return [:] }
         guard path.count > 1 else { return [key: value] }
         return [key: .object(jsonPatch(path: Array(path.dropFirst()), value: value))]

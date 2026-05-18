@@ -1,6 +1,6 @@
 import Foundation
 
-enum LogLevel: String, CaseIterable, Identifiable, Codable, Sendable {
+nonisolated enum LogLevel: String, CaseIterable, Identifiable, Codable, Sendable {
     case debug
     case info
     case warning
@@ -9,7 +9,7 @@ enum LogLevel: String, CaseIterable, Identifiable, Codable, Sendable {
     var id: String { rawValue }
 }
 
-enum ClashMode: String, CaseIterable, Identifiable, Codable, Sendable {
+nonisolated enum ClashMode: String, CaseIterable, Identifiable, Codable, Sendable {
     case rule = "Rule"
     case global = "Global"
     case direct = "Direct"
@@ -26,7 +26,7 @@ enum ClashMode: String, CaseIterable, Identifiable, Codable, Sendable {
     }
 }
 
-struct BackendOverview: Codable, Equatable, Sendable {
+nonisolated struct BackendOverview: Codable, Equatable, Sendable {
     var version: String
     var uptime: TimeInterval?
     var memoryBytes: Int?
@@ -34,7 +34,7 @@ struct BackendOverview: Codable, Equatable, Sendable {
     var downloadBytesPerSecond: Int?
     var activeConnections: Int?
 
-    static let empty = BackendOverview(
+    static let empty = Self(
         version: "Unknown",
         uptime: nil,
         memoryBytes: nil,
@@ -92,7 +92,7 @@ struct BackendOverview: Codable, Equatable, Sendable {
     }
 }
 
-struct ProxyItem: Identifiable, Equatable, Codable, Sendable {
+nonisolated struct ProxyItem: Identifiable, Equatable, Codable, Sendable {
     var id: String { name }
     var name: String
     var type: String
@@ -209,12 +209,12 @@ struct ProxyItem: Identifiable, Equatable, Codable, Sendable {
     }
 }
 
-struct DelayHistory: Codable, Equatable, Sendable {
+nonisolated struct DelayHistory: Codable, Equatable, Sendable {
     var time: String?
     var delay: Int?
 }
 
-struct ProxyCollection: Codable, Equatable, Sendable {
+nonisolated struct ProxyCollection: Codable, Equatable, Sendable {
     var proxies: [ProxyItem]
     var groups: [ProxyItem]
 
@@ -232,9 +232,9 @@ struct ProxyCollection: Codable, Equatable, Sendable {
         proxies.first { $0.name == name } ?? groups.first { $0.name == name }
     }
 
-    func applyingDelayResults(_ delays: [String: Int]) -> ProxyCollection {
+    func applyingDelayResults(_ delays: [String: Int]) -> Self {
         guard !delays.isEmpty else { return self }
-        return ProxyCollection(
+        return Self(
             proxies: proxies.map { $0.applyingDelayResult(delays[$0.name]) },
             groups: groups.map { $0.applyingDelayResult(delays[$0.name]) }
         )
@@ -283,7 +283,7 @@ struct ProxyCollection: Codable, Equatable, Sendable {
 }
 
 private extension ProxyItem {
-    func applyingDelayResult(_ delay: Int?) -> ProxyItem {
+    nonisolated func applyingDelayResult(_ delay: Int?) -> ProxyItem {
         guard let delay else { return self }
         var copy = self
         copy.delay = delay
@@ -291,7 +291,7 @@ private extension ProxyItem {
     }
 }
 
-struct ProxyProvider: Identifiable, Codable, Equatable, Sendable {
+nonisolated struct ProxyProvider: Identifiable, Codable, Equatable, Sendable {
     var id: String { name }
     var name: String
     var type: String?
@@ -365,7 +365,7 @@ struct ProxyProvider: Identifiable, Codable, Equatable, Sendable {
     }
 }
 
-struct ProviderCollection<T: Decodable & Identifiable & Equatable>: Decodable, Equatable {
+nonisolated struct ProviderCollection<T: Decodable & Identifiable & Equatable>: Decodable, Equatable {
     var providers: [T]
 
     enum CodingKeys: String, CodingKey {
@@ -386,7 +386,7 @@ struct ProviderCollection<T: Decodable & Identifiable & Equatable>: Decodable, E
     }
 }
 
-struct SubscriptionInfo: Codable, Equatable, Sendable {
+nonisolated struct SubscriptionInfo: Codable, Equatable, Sendable {
     var upload: Int64?
     var download: Int64?
     var total: Int64?
@@ -445,7 +445,7 @@ struct SubscriptionInfo: Codable, Equatable, Sendable {
     }
 }
 
-struct MihomoVersionPayload: Decodable, Equatable, Sendable {
+nonisolated struct MihomoVersionPayload: Decodable, Equatable, Sendable {
     var version: String
 
     enum CodingKeys: String, CodingKey {
@@ -453,12 +453,12 @@ struct MihomoVersionPayload: Decodable, Equatable, Sendable {
     }
 
     init(version: String) {
-        self.version = MihomoVersionPayload.clean(version)
+        self.version = Self.clean(version)
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        version = MihomoVersionPayload.clean(try container.decodeIfPresent(String.self, forKey: .version) ?? "")
+        version = Self.clean(try container.decodeIfPresent(String.self, forKey: .version) ?? "")
     }
 
     private static func clean(_ value: String) -> String {
@@ -467,7 +467,7 @@ struct MihomoVersionPayload: Decodable, Equatable, Sendable {
     }
 }
 
-struct MihomoModePayload: Decodable, Equatable, Sendable {
+nonisolated struct MihomoModePayload: Decodable, Equatable, Sendable {
     var mode: ClashMode?
 
     enum CodingKeys: String, CodingKey {
@@ -480,16 +480,16 @@ struct MihomoModePayload: Decodable, Equatable, Sendable {
     }
 }
 
-struct MemorySnapshot: Codable, Equatable, Sendable {
+nonisolated struct MemorySnapshot: Codable, Equatable, Sendable {
     var inuse: Int?
 }
 
-struct TrafficSnapshot: Codable, Equatable, Sendable {
+nonisolated struct TrafficSnapshot: Codable, Equatable, Sendable {
     var up: Int
     var down: Int
 }
 
-struct ProxyDelayPayload: Decodable, Equatable, Sendable {
+nonisolated struct ProxyDelayPayload: Decodable, Equatable, Sendable {
     var delay: Int?
 
     enum CodingKeys: String, CodingKey {
@@ -497,7 +497,7 @@ struct ProxyDelayPayload: Decodable, Equatable, Sendable {
     }
 }
 
-struct RuleItem: Identifiable, Codable, Equatable, Sendable {
+nonisolated struct RuleItem: Identifiable, Codable, Equatable, Sendable {
     var id: String {
         if let index {
             return "\(index)-\(type)-\(payload)-\(proxy)"
@@ -560,11 +560,11 @@ struct RuleItem: Identifiable, Codable, Equatable, Sendable {
     }
 }
 
-struct RuleCollection: Codable, Equatable, Sendable {
+nonisolated struct RuleCollection: Codable, Equatable, Sendable {
     var rules: [RuleItem]
 }
 
-struct RuleProvider: Identifiable, Codable, Equatable, Sendable {
+nonisolated struct RuleProvider: Identifiable, Codable, Equatable, Sendable {
     var id: String { name }
     var name: String
     var type: String?
@@ -629,7 +629,7 @@ struct RuleProvider: Identifiable, Codable, Equatable, Sendable {
     }
 }
 
-struct ConnectionMetadata: Codable, Equatable, Sendable {
+nonisolated struct ConnectionMetadata: Codable, Equatable, Sendable {
     var network: String?
     var type: String?
     var sourceIP: String?
@@ -638,7 +638,7 @@ struct ConnectionMetadata: Codable, Equatable, Sendable {
     var process: String?
 }
 
-struct ConnectionInfo: Identifiable, Codable, Equatable, Sendable {
+nonisolated struct ConnectionInfo: Identifiable, Codable, Equatable, Sendable {
     var id: String
     var metadata: ConnectionMetadata
     var upload: Int64
@@ -653,7 +653,7 @@ struct ConnectionInfo: Identifiable, Codable, Equatable, Sendable {
     }
 }
 
-struct ConnectionsSnapshot: Codable, Equatable, Sendable {
+nonisolated struct ConnectionsSnapshot: Codable, Equatable, Sendable {
     var uploadTotal: Int64?
     var downloadTotal: Int64?
     var connections: [ConnectionInfo]
@@ -667,7 +667,7 @@ struct ConnectionsSnapshot: Codable, Equatable, Sendable {
     }
 }
 
-struct ConnectionFilter: Equatable, Sendable {
+nonisolated struct ConnectionFilter: Equatable, Sendable {
     var sourceIP = ""
     var outbound = ""
     var minimumDownloadBytes: Int64 = 0
@@ -679,7 +679,7 @@ struct ConnectionFilter: Equatable, Sendable {
     }
 }
 
-struct LogEntry: Identifiable, Decodable, Equatable, Sendable {
+nonisolated struct LogEntry: Identifiable, Decodable, Equatable, Sendable {
     var id = UUID()
     var type: String
     var payload: String
@@ -691,7 +691,7 @@ struct LogEntry: Identifiable, Decodable, Equatable, Sendable {
     }
 }
 
-enum CoreUpdateChannel: String, CaseIterable, Identifiable, Sendable {
+nonisolated enum CoreUpdateChannel: String, CaseIterable, Identifiable, Sendable {
     case release
     case alpha
 
@@ -707,7 +707,7 @@ enum CoreUpdateChannel: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-struct CoreUpdateReport: Equatable, Sendable {
+nonisolated struct CoreUpdateReport: Equatable, Sendable {
     enum Status: Equatable, Sendable {
         case success
         case failure
@@ -740,20 +740,20 @@ struct CoreUpdateReport: Equatable, Sendable {
         }
     }
 
-    static func success(channel: CoreUpdateChannel) -> CoreUpdateReport {
-        CoreUpdateReport(channel: channel, status: .success, message: "\(channel.title) core update finished.")
+    static func success(channel: CoreUpdateChannel) -> Self {
+        Self(channel: channel, status: .success, message: "\(channel.title) core update finished.")
     }
 
-    static func failure(channel: CoreUpdateChannel, message: String) -> CoreUpdateReport {
-        CoreUpdateReport(channel: channel, status: .failure, message: "\(channel.title) core update failed. \(message)")
+    static func failure(channel: CoreUpdateChannel, message: String) -> Self {
+        Self(channel: channel, status: .failure, message: "\(channel.title) core update failed. \(message)")
     }
 
-    static func skipped(channel: CoreUpdateChannel) -> CoreUpdateReport {
-        CoreUpdateReport(channel: channel, status: .skipped, message: "Core update unavailable for current backend.")
+    static func skipped(channel: CoreUpdateChannel) -> Self {
+        Self(channel: channel, status: .skipped, message: "Core update unavailable for current backend.")
     }
 }
 
-struct DynamicCodingKey: CodingKey {
+nonisolated struct DynamicCodingKey: CodingKey {
     var stringValue: String
     var intValue: Int?
 
@@ -768,7 +768,7 @@ struct DynamicCodingKey: CodingKey {
 }
 
 extension Array where Element == ProxyProvider {
-    var visibleProxyProviders: [ProxyProvider] {
+    nonisolated var visibleProxyProviders: [ProxyProvider] {
         filter { provider in
             provider.name != "default" && provider.vehicleType?.caseInsensitiveCompare("Compatible") != .orderedSame
         }

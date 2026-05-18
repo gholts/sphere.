@@ -135,7 +135,7 @@ enum EmojiTextNormalizer {
         cursor = value.index(after: cursor)
 
         var radix = 10
-        if cursor < value.endIndex, (value[cursor] == "x" || value[cursor] == "X") {
+        if cursor < value.endIndex, value[cursor] == "x" || value[cursor] == "X" {
             radix = 16
             cursor = value.index(after: cursor)
         }

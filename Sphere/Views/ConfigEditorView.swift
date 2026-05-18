@@ -28,7 +28,7 @@ struct ConfigEditorView: View {
 
     var body: some View {
         List {
-            if isLoadingConfig && app.configs.isEmpty {
+            if isLoadingConfig, app.configs.isEmpty {
                 ProgressView()
                     .frame(maxWidth: .infinity, alignment: .center)
                     .listRowBackground(Color.clear)
