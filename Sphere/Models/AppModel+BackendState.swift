@@ -287,7 +287,7 @@ extension AppModel {
         let delay = max(0, cacheSaveInterval - Date().timeIntervalSince(lastCacheSave))
         if delay > 0 {
             do {
-                try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                try await Task.sleep(for: .nanoseconds(Int64(delay * 1_000_000_000)))
             } catch {
                 return
             }
