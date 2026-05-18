@@ -3,7 +3,7 @@ import Foundation
 enum ByteFormat {
     static func bytes(_ value: Int64?) -> String {
         guard let value else { return "n/a" }
-        return ByteCountFormatter.string(fromByteCount: value, countStyle: .binary)
+        return value.formatted(.byteCount(style: .binary))
     }
 
     static func memoryBytes(_ value: Int?) -> String {
@@ -13,7 +13,7 @@ enum ByteFormat {
 
     static func speedBytes(_ value: Int?) -> String {
         guard let value else { return "n/a" }
-        return "\(ByteCountFormatter.string(fromByteCount: Int64(value), countStyle: .file))/s"
+        return "\(Int64(value).formatted(.byteCount(style: .file)))/s"
     }
 
     private static func iecBytes(_ value: Int64) -> String {
@@ -27,9 +27,8 @@ enum ByteFormat {
         if unitIndex == 0 {
             return "\(value) B"
         }
-        let number = amount >= 10 || amount.rounded() == amount
-            ? String(format: "%.0f", amount)
-            : String(format: "%.1f", amount)
+        let fractionLength = amount >= 10 || amount.rounded() == amount ? 0 : 1
+        let number = amount.formatted(.number.precision(.fractionLength(fractionLength)))
         return "\(number) \(units[unitIndex])"
     }
 }

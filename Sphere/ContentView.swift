@@ -13,14 +13,12 @@ struct ContentView: View {
     }
 }
 
-struct ContentView_Previews: PreviewProvider {
-    static var previews: some View {
-        let app = PreviewFixtures.app()
-        Group {
-            ContentView()
-            AppTabView()
-                .environment(app)
-                .environment(app.liveState)
-        }
+#Preview {
+    let app = PreviewFixtures.app()
+    Group {
+        ContentView()
+        AppTabView()
+            .environment(app)
+            .environment(app.liveState)
     }
 }

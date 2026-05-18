@@ -7,6 +7,8 @@ actor ProxyIconDiskCache {
 
     private let directory: URL
     private let maxIconBytes = 1_048_576
+    private static let hexadecimalRadix = 16
+    private static let singleHexDigitLength = 1
 
     init(directory: URL? = nil) {
         let cachesDirectory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
@@ -29,8 +31,13 @@ actor ProxyIconDiskCache {
 
     private func fileURL(for icon: String) -> URL {
         let digest = SHA256.hash(data: Data(icon.utf8))
-        let name = digest.map { String(format: "%02x", $0) }.joined()
+        let name = digest.map(Self.hexByte).joined()
         return directory.appendingPathComponent(name, isDirectory: false)
+    }
+
+    private static func hexByte(_ byte: UInt8) -> String {
+        let value = String(byte, radix: hexadecimalRadix)
+        return value.count == singleHexDigitLength ? "0\(value)" : value
     }
 }
 

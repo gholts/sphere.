@@ -673,8 +673,8 @@ nonisolated struct ConnectionFilter: Equatable, Sendable {
     var minimumDownloadBytes: Int64 = 0
 
     func matches(_ connection: ConnectionInfo) -> Bool {
-        let sourceMatches = sourceIP.isEmpty || (connection.metadata.sourceIP ?? "").localizedCaseInsensitiveContains(sourceIP)
-        let outboundMatches = outbound.isEmpty || connection.outbound.localizedCaseInsensitiveContains(outbound)
+        let sourceMatches = sourceIP.isEmpty || (connection.metadata.sourceIP ?? "").localizedStandardContains(sourceIP)
+        let outboundMatches = outbound.isEmpty || connection.outbound.localizedStandardContains(outbound)
         return sourceMatches && outboundMatches && connection.download >= minimumDownloadBytes
     }
 }

@@ -6,6 +6,7 @@ struct RuleView: View {
 
     var body: some View {
         NavigationStack {
+            let providers = ruleProviderLookup
             List {
                 Section("Rules") {
                     if app.rules.isEmpty {
@@ -15,7 +16,7 @@ struct RuleView: View {
                         ForEach(app.rules) { rule in
                             RuleRow(
                                 rule: rule,
-                                provider: provider(for: rule),
+                                provider: rule.isRuleSet ? providers[rule.payload] : nil,
                                 isRefreshing: refreshingRuleSetNames.contains(rule.payload),
                                 refresh: { refreshRuleSet(rule.payload) }
                             )
@@ -30,9 +31,8 @@ struct RuleView: View {
         }
     }
 
-    private func provider(for rule: RuleItem) -> RuleProvider? {
-        guard rule.isRuleSet else { return nil }
-        return app.ruleProviders.first { $0.name == rule.payload }
+    private var ruleProviderLookup: [String: RuleProvider] {
+        Dictionary(app.ruleProviders.map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
     }
 
     private func refreshRuleSet(_ name: String) {

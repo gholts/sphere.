@@ -227,7 +227,7 @@ final class AppModel {
     }
 
     var canUpdateCore: Bool {
-        selectedProfile?.kind == .mihomo && !overview.version.localizedCaseInsensitiveContains("sing-box")
+        selectedProfile?.kind == .mihomo && !overview.version.localizedStandardContains("sing-box")
     }
 
     var visibleBackendErrorMessage: String? {

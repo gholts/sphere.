@@ -38,7 +38,7 @@ struct MoreView: View {
                     OverviewRows(overview: live.overview)
                 }
                 
-                if canUpdateCore {
+                if app.canUpdateCore {
                     Section("Update Core") {
                         ForEach(CoreUpdateChannel.allCases) { channel in
                             Button {
@@ -120,10 +120,6 @@ struct MoreView: View {
             get: { app.clashMode },
             set: { mode in Task { await app.updateMode(mode) } }
         )
-    }
-
-    private var canUpdateCore: Bool {
-        app.selectedProfile?.kind == .mihomo && !live.overview.version.localizedCaseInsensitiveContains("sing-box")
     }
 
     private func startCoreUpdate(channel: CoreUpdateChannel) {

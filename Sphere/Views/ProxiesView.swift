@@ -96,7 +96,7 @@ struct ProxyGroupExpansionButton: View {
                     .frame(width: 12, alignment: .trailing)
             }
             .frame(width: 82, alignment: .trailing)
-            .frame(height: 18, alignment: .center)
+            .frame(minWidth: 44, minHeight: 44, alignment: .center)
             .font(.caption2)
             .contentShape(.rect)
             .transaction { transaction in
@@ -125,7 +125,7 @@ struct ProxyGroupSpeedTestButton: View {
                         .transition(.spinnerBadgeAppearance)
                 }
             }
-            .frame(width: 18, height: 18)
+            .frame(width: 44, height: 44)
             .font(.caption2)
             .contentShape(.rect)
             .animation(.spinnerBadgeAppearance, value: isTesting)

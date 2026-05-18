@@ -52,6 +52,7 @@ private struct SphereProgressLockScreenView: View {
                 .font(.title3)
                 .foregroundStyle(activityTint(for: context.state.status))
                 .frame(width: 28)
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
