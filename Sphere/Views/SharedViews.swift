@@ -33,6 +33,31 @@ struct EmptyStateView: View {
     }
 }
 
+struct DisabledAwareActionLabel: View {
+    var title: String
+    var systemImage: String
+    var isEnabled: Bool
+    var enabledStyle: Color = .accentColor
+    var disabledStyle: Color = .secondary
+
+    var body: some View {
+        Label(title, systemImage: systemImage)
+            .foregroundStyle(isEnabled ? enabledStyle : disabledStyle)
+    }
+}
+
+struct DisabledAwareActionIcon: View {
+    var systemImage: String
+    var isEnabled: Bool
+    var enabledStyle: Color = .accentColor
+    var disabledStyle: Color = .secondary
+
+    var body: some View {
+        Image(systemName: systemImage)
+            .foregroundStyle(isEnabled ? enabledStyle : disabledStyle)
+    }
+}
+
 struct NavigationTitleBadge: View {
     var title: String
     var message: String?

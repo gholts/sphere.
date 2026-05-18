@@ -52,7 +52,11 @@ struct ProfileWizardView: View {
                         Task { await test() }
                     } label: {
                         HStack(spacing: 8) {
-                            Label("Test Connection", systemImage: "antenna.radiowaves.left.and.right")
+                            DisabledAwareActionLabel(
+                                title: "Test Connection",
+                                systemImage: "antenna.radiowaves.left.and.right",
+                                isEnabled: canTestConnection
+                            )
                             Spacer()
                             if isTesting {
                                 ProgressView()
@@ -62,18 +66,21 @@ struct ProfileWizardView: View {
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .foregroundStyle(.tint)
                         .animation(.spinnerBadgeAppearance, value: isTesting)
                     }
-                    .disabled(!kind.isImplemented || baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(!canTestConnection)
                     .allowsHitTesting(!isTesting)
 
                     Button {
                         saveProfile()
                     } label: {
-                        Label(saveButtonTitle, systemImage: "checkmark.circle")
+                        DisabledAwareActionLabel(
+                            title: saveButtonTitle,
+                            systemImage: "checkmark.circle",
+                            isEnabled: canSaveProfile
+                        )
                     }
-                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(!canSaveProfile)
 
                     if let testResult {
                         Label {
@@ -101,6 +108,22 @@ struct ProfileWizardView: View {
 
     private var profile: APIProfile {
         APIProfile(id: profileID, name: name, kind: kind, baseURL: baseURL, secret: secret)
+    }
+
+    private var canTestConnection: Bool {
+        kind.isImplemented && !trimmedBaseURL.isEmpty
+    }
+
+    private var canSaveProfile: Bool {
+        !trimmedName.isEmpty && !trimmedBaseURL.isEmpty
+    }
+
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var trimmedBaseURL: String {
+        baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private var navigationTitle: String {

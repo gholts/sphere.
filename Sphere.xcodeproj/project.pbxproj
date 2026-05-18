@@ -7,6 +7,13 @@
 	objects = {
 
 /* Begin PBXContainerItemProxy section */
+		4EAC100E2FC000000000000E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4EDFD41C2FB2266A0053A9F5 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4EAC10072FC0000000000007;
+			remoteInfo = SphereProgressWidgetExtension;
+		};
 		AA00000B000000000000000B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 4EDFD41C2FB2266A0053A9F5 /* Project object */;
@@ -16,8 +23,27 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXBuildFile section */
+		4EAC100B2FC000000000000B /* SphereProgressWidgetExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 4EAC10012FC0000000000001 /* SphereProgressWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		4EAC100C2FC000000000000C /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				4EAC100B2FC000000000000B /* SphereProgressWidgetExtension.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		4EDFD4242FB2266A0053A9F5 /* Sphere.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Sphere.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4EAC10012FC0000000000001 /* SphereProgressWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SphereProgressWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000010000000000000001 /* SphereTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SphereTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -36,9 +62,29 @@
 			);
 			target = 4EDFD4232FB2266A0053A9F5 /* Sphere */;
 		};
+		4EAC100F2FC000000000000F /* Exceptions for "SphereProgressWidgetExtension" folder in "SphereProgressWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 4EAC10072FC0000000000007 /* SphereProgressWidgetExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		4EAC10022FC0000000000002 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		4EAC10032FC0000000000003 /* SphereProgressWidgetExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				4EAC100F2FC000000000000F /* Exceptions for "SphereProgressWidgetExtension" folder in "SphereProgressWidgetExtension" target */,
+			);
+			path = SphereProgressWidgetExtension;
+			sourceTree = "<group>";
+		};
 		4EDFD4262FB2266A0053A9F5 /* Sphere */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -63,6 +109,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		4EAC10042FC0000000000004 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		AA0000040000000000000004 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -77,6 +130,8 @@
 			isa = PBXGroup;
 			children = (
 				4EDFD4262FB2266A0053A9F5 /* Sphere */,
+				4EAC10022FC0000000000002 /* Shared */,
+				4EAC10032FC0000000000003 /* SphereProgressWidgetExtension */,
 				AA0000020000000000000002 /* SphereTests */,
 				4EDFD4252FB2266A0053A9F5 /* Products */,
 			);
@@ -86,6 +141,7 @@
 			isa = PBXGroup;
 			children = (
 				4EDFD4242FB2266A0053A9F5 /* Sphere.app */,
+				4EAC10012FC0000000000001 /* SphereProgressWidgetExtension.appex */,
 				AA0000010000000000000001 /* SphereTests.xctest */,
 			);
 			name = Products;
@@ -101,13 +157,16 @@
 				4EDFD4202FB2266A0053A9F5 /* Sources */,
 				4EDFD4212FB2266A0053A9F5 /* Frameworks */,
 				4EDFD4222FB2266A0053A9F5 /* Resources */,
+				4EAC100C2FC000000000000C /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				4EAC100D2FC000000000000D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				4EDFD4262FB2266A0053A9F5 /* Sphere */,
+				4EAC10022FC0000000000002 /* Shared */,
 			);
 			name = Sphere;
 			packageProductDependencies = (
@@ -115,6 +174,29 @@
 			productName = Sphere;
 			productReference = 4EDFD4242FB2266A0053A9F5 /* Sphere.app */;
 			productType = "com.apple.product-type.application";
+		};
+		4EAC10072FC0000000000007 /* SphereProgressWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4EAC100A2FC000000000000A /* Build configuration list for PBXNativeTarget "SphereProgressWidgetExtension" */;
+			buildPhases = (
+				4EAC10062FC0000000000006 /* Sources */,
+				4EAC10042FC0000000000004 /* Frameworks */,
+				4EAC10052FC0000000000005 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				4EAC10022FC0000000000002 /* Shared */,
+				4EAC10032FC0000000000003 /* SphereProgressWidgetExtension */,
+			);
+			name = SphereProgressWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = SphereProgressWidgetExtension;
+			productReference = 4EAC10012FC0000000000001 /* SphereProgressWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 		AA0000060000000000000006 /* SphereTests */ = {
 			isa = PBXNativeTarget;
@@ -149,6 +231,9 @@
 				LastSwiftUpdateCheck = 2630;
 				LastUpgradeCheck = 2630;
 				TargetAttributes = {
+					4EAC10072FC0000000000007 = {
+						CreatedOnToolsVersion = 26.3;
+					};
 					4EDFD4232FB2266A0053A9F5 = {
 						CreatedOnToolsVersion = 26.3;
 					};
@@ -173,6 +258,7 @@
 			projectRoot = "";
 			targets = (
 				4EDFD4232FB2266A0053A9F5 /* Sphere */,
+				4EAC10072FC0000000000007 /* SphereProgressWidgetExtension */,
 				AA0000060000000000000006 /* SphereTests */,
 			);
 		};
@@ -180,6 +266,13 @@
 
 /* Begin PBXResourcesBuildPhase section */
 		4EDFD4222FB2266A0053A9F5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4EAC10052FC0000000000005 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -203,6 +296,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		4EAC10062FC0000000000006 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		AA0000030000000000000003 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -213,6 +313,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		4EAC100D2FC000000000000D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4EAC10072FC0000000000007 /* SphereProgressWidgetExtension */;
+			targetProxy = 4EAC100E2FC000000000000E /* PBXContainerItemProxy */;
+		};
 		AA00000A000000000000000A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 4EDFD4232FB2266A0053A9F5 /* Sphere */;
@@ -406,6 +511,68 @@
 			};
 			name = Release;
 		};
+		4EAC10082FC0000000000008 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 2Q7RA55F4B;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SphereProgressWidgetExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.gholts.Sphere.ProgressWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		4EAC10092FC0000000000009 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 2Q7RA55F4B;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SphereProgressWidgetExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.gholts.Sphere.ProgressWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		AA0000080000000000000008 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -471,6 +638,15 @@
 			buildConfigurations = (
 				4EDFD4302FB2266B0053A9F5 /* Debug */,
 				4EDFD4312FB2266B0053A9F5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4EAC100A2FC000000000000A /* Build configuration list for PBXNativeTarget "SphereProgressWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4EAC10082FC0000000000008 /* Debug */,
+				4EAC10092FC0000000000009 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

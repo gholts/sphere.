@@ -19,24 +19,11 @@ struct MoreView: View {
                             }
                         }
                     }
-
+                    
                     Button {
                         profileForm = .add
                     } label: {
                         Label("Add Profile", systemImage: "plus.circle")
-                    }
-
-                    if let profile = app.selectedProfile {
-                        AdaptiveStatRows(metrics: [
-                            StatMetric(title: "Type", value: profile.kind.title),
-                            StatMetric(title: "URL", value: profile.baseURL)
-                        ])
-
-                        Button {
-                            profileForm = .edit(profile)
-                        } label: {
-                            Label("Edit Profile", systemImage: "pencil")
-                        }
                     }
                 }
 
@@ -59,7 +46,11 @@ struct MoreView: View {
                             Button {
                                 startCoreUpdate(channel: channel)
                             } label: {
-                                Label(channel.title, systemImage: "arrow.down.circle")
+                                DisabledAwareActionLabel(
+                                    title: channel.title,
+                                    systemImage: "arrow.down.circle",
+                                    isEnabled: !app.isUpdatingCore
+                                )
                             }
                             .disabled(app.isUpdatingCore)
                         }

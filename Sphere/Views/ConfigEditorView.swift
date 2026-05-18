@@ -60,7 +60,10 @@ struct ConfigEditorView: View {
                 Button {
                     Task { await reload() }
                 } label: {
-                    Image(systemName: "arrow.triangle.2.circlepath")
+                    DisabledAwareActionIcon(
+                        systemImage: "arrow.triangle.2.circlepath",
+                        isEnabled: !isLoadingConfig
+                    )
                 }
                 .accessibilityLabel("Reload config")
                 .disabled(isLoadingConfig)
@@ -68,7 +71,10 @@ struct ConfigEditorView: View {
                 Button {
                     Task { await save() }
                 } label: {
-                    Image(systemName: "checkmark")
+                    DisabledAwareActionIcon(
+                        systemImage: "checkmark",
+                        isEnabled: !changedValues.isEmpty
+                    )
                 }
                 .disabled(changedValues.isEmpty)
                 .accessibilityLabel("Save config")

@@ -112,6 +112,7 @@ final class AppModel: ObservableObject {
 
     private let defaults: UserDefaults
     private let makeClient: @MainActor (APIProfile) -> any ProxyBackendClient
+    private let progressActivityReporter: any ProgressActivityReporting
     private let backendErrorDebounceDuration: Duration
     private var connectionTask: Task<Void, Never>?
     private var memoryTask: Task<Void, Never>?
@@ -140,10 +141,12 @@ final class AppModel: ObservableObject {
     init(
         defaults: UserDefaults = .standard,
         backendErrorDebounceDuration: Duration = .seconds(5),
+        progressActivityReporter: (any ProgressActivityReporting)? = nil,
         clientFactory: @escaping @MainActor (APIProfile) -> any ProxyBackendClient = BackendClientFactory.make(profile:)
     ) {
         self.defaults = defaults
         self.backendErrorDebounceDuration = backendErrorDebounceDuration
+        self.progressActivityReporter = progressActivityReporter ?? ProgressActivityReporterFactory.makeDefault()
         self.makeClient = clientFactory
         loadProfiles()
         loadCachedData()
@@ -433,12 +436,29 @@ final class AppModel: ObservableObject {
         isTestingProxyGroupDelays = true
         defer { isTestingProxyGroupDelays = false }
 
-        _ = await captureErrors {
+        await progressActivityReporter.start(
+            kind: .latencyTest,
+            detail: "0/\(groupNames.count) groups",
+            fraction: 0
+        )
+
+        let outcome = await captureErrors {
             var didChange = false
-            let delays = try await delayProxyGroups(client: client, groupNames: groupNames)
+            let delays = try await delayProxyGroups(client: client, groupNames: groupNames) { completed, total in
+                await self.progressActivityReporter.update(
+                    kind: .latencyTest,
+                    detail: "\(completed)/\(total) groups",
+                    fraction: Double(completed) / Double(total) * ProgressActivityFractions.latencyGroupTestingWeight
+                )
+            }
             if !delays.isEmpty {
                 didChange = setProxyCollection(proxyCollection.applyingDelayResults(delays)) || didChange
             }
+            await progressActivityReporter.update(
+                kind: .latencyTest,
+                detail: "Refreshing nodes",
+                fraction: ProgressActivityFractions.latencyRefreshing
+            )
             let proxyRefresh = await result { try await client.proxies() }
             switch proxyRefresh {
             case .success(let collection):
@@ -451,6 +471,20 @@ final class AppModel: ObservableObject {
             if didChange {
                 saveCachedDataIfUseful()
             }
+        }
+
+        if outcome.errorMessage == nil {
+            await progressActivityReporter.finish(
+                kind: .latencyTest,
+                status: .succeeded,
+                detail: "Latency test finished"
+            )
+        } else {
+            await progressActivityReporter.finish(
+                kind: .latencyTest,
+                status: .failed,
+                detail: "Latency test failed"
+            )
         }
     }
 
@@ -536,16 +570,46 @@ final class AppModel: ObservableObject {
         }
         isUpdatingCore = true
         defer { isUpdatingCore = false }
+        await progressActivityReporter.start(
+            kind: .coreUpdate,
+            detail: "\(channel.title) channel",
+            fraction: ProgressActivityFractions.coreStarted
+        )
         do {
+            await progressActivityReporter.update(
+                kind: .coreUpdate,
+                detail: "Downloading \(channel.title.lowercased()) core",
+                fraction: ProgressActivityFractions.coreDownloading
+            )
             try await client.upgradeCore(channel: channel)
             markBackendConnected()
+            await progressActivityReporter.update(
+                kind: .coreUpdate,
+                detail: "Refreshing backend data",
+                fraction: ProgressActivityFractions.coreRefreshing
+            )
             await refreshAll()
+            await progressActivityReporter.finish(
+                kind: .coreUpdate,
+                status: .succeeded,
+                detail: "Core update finished"
+            )
             return .success(channel: channel)
         } catch {
             guard !error.isCancellation else {
+                await progressActivityReporter.finish(
+                    kind: .coreUpdate,
+                    status: .failed,
+                    detail: "Core update cancelled"
+                )
                 return .failure(channel: channel, message: "Cancelled.")
             }
             beginBackendErrorDebounce(error.localizedDescription)
+            await progressActivityReporter.finish(
+                kind: .coreUpdate,
+                status: .failed,
+                detail: "Core update failed"
+            )
             return .failure(channel: channel, message: error.localizedDescription)
         }
     }
@@ -803,11 +867,16 @@ final class AppModel: ObservableObject {
         }
     }
 
-    private func delayProxyGroups(client: any ProxyBackendClient, groupNames: [String]) async throws -> [String: Int] {
+    private func delayProxyGroups(
+        client: any ProxyBackendClient,
+        groupNames: [String],
+        progress: ((Int, Int) async -> Void)? = nil
+    ) async throws -> [String: Int] {
         var mergedDelays: [String: Int] = [:]
         var firstError: Error?
         var successCount = 0
         var startIndex = groupNames.startIndex
+        var completedCount = 0
 
         while startIndex < groupNames.endIndex {
             let endIndex = groupNames.index(startIndex, offsetBy: ProxyLatencyTestDefaults.maxConcurrentGroups, limitedBy: groupNames.endIndex) ?? groupNames.endIndex
@@ -843,6 +912,8 @@ final class AppModel: ObservableObject {
                     firstError = firstError ?? error
                 }
             }
+            completedCount += batch.count
+            await progress?(completedCount, groupNames.count)
             startIndex = endIndex
         }
 
