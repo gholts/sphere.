@@ -90,29 +90,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-
-          APP_NAME="Sphere"
-          APP_BUNDLE_ID="dev.gholts.Sphere"
-          DEVELOPER_NAME="Hugo Lee"
-
-          SOURCE_NAME="Sphere Source"
-          SOURCE_IDENTIFIER="dev.gholts.sphere-repo"
-
-          TINT_COLOR="16A34A"
-          ASSET_REGEX='^sphere-.*\.ipa$'
-          MAX_VERSIONS=30
-
-          REPO_URL="https://github.com/${GITHUB_REPOSITORY}/"
-          PAGES_URL="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/"
-          ICON_URL="${PAGES_URL}/icon.png"
-
           mkdir -p site/altstore tmp/json
-
           gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" > tmp/json/releases.json
-
           jq -c \
-            --arg assetRegex "$ASSET_REGEX" \
-            --argjson maxVersions "$MAX_VERSIONS" \
             '
             sort_by(.published_at // .created_at)
             | reverse
@@ -120,24 +100,26 @@ jobs:
             | map(select(.prerelease | not))
             | map(
                 . as $release
-                | ($release.assets | map(select(.name | test($assetRegex))) | first) as $asset
+                | ($release.assets | map(select(.name | test("^sphere-.*\\.ipa$"))) | first) as $asset
                 | select($asset != null)
                 | {
                     version: ($release.tag_name | sub("^v"; "")),
                     date: ($release.published_at // $release.created_at),
                     localizedDescription: (
                       if (($release.body // "") | length) > 0
-                      then $release.body
+                      then ($release.body | gsub("\\*\\*"; ""))
                       elif (($release.name // "") | length) > 0
-                      then $release.name
+                      then ($release.name | gsub("\\*\\*"; ""))
                       else "Release \($release.tag_name)"
                       end
                     ),
                     downloadURL: $asset.browser_download_url,
-                    size: $asset.size
+                    size: $asset.size,
+                    buildVersion: null,
+                    minOSVersion: "18.6"
                   }
               )
-            | .[:$maxVersions]
+            | .[:50]
             ' tmp/json/releases.json > tmp/json/versions.json
 
           if [ "$(jq 'length' tmp/json/versions.json)" -eq 0 ]; then
@@ -145,70 +127,58 @@ jobs:
             exit 1
           fi
 
-          jq -c \
-            --arg assetRegex "$ASSET_REGEX" \
-            '
-            sort_by(.published_at // .created_at)
-            | reverse
-            | map(select(.draft | not))
-            | map(select(.prerelease | not))
-            | map(
-                . as $release
-                | ($release.assets | map(select(.name | test($assetRegex))) | first) as $asset
-                | select($asset != null)
-                | {
-                    title: "Sphere \($release.tag_name)",
-                    identifier: "sphere-release-\($release.tag_name)",
-                    caption: (
-                      if (($release.body // "") | length) > 0
-                      then (($release.body | split("\n")) | map(select(length > 0)) | first)
-                      else "Sphere \($release.tag_name) is now available."
-                      end
-                    ),
-                    tintColor: "16A34A",
-                    date: ($release.published_at // $release.created_at),
-                    url: $release.html_url,
-                    appID: "dev.gholts.Sphere",
-                    notify: false
-                  }
-              )
-            '
-
-            jq -n \
+          jq -n \
             --slurpfile versions tmp/json/versions.json \
-            --arg sourceName "$SOURCE_NAME" \
-            --arg sourceIdentifier "$SOURCE_IDENTIFIER" \
-            --arg iconURL "$ICON_URL" \
-            --arg website "$REPO_URL" \
-            --arg appName "$APP_NAME" \
-            --arg bundleIdentifier "$APP_BUNDLE_ID" \
-            --arg developerName "$DEVELOPER_NAME" \
-            --arg tintColor "$TINT_COLOR" \
+            --arg sourceName "Sphere Source" \
+            --arg sourceSubtitle "Proxy controller client" \
+            --arg sourceDescription "" \
+            --arg sourceIconURL "https://github.com/user-attachments/assets/86577a94-7e6f-4b31-b18e-f7a7271c4ad7" \
+            --arg website "https://github.com/${GITHUB_REPOSITORY}/" \
+            --arg patreonURL "" \
+            --arg tintColor "#16A34A" \
+            --arg appName "Sphere" \
+            --arg bundleIdentifier "dev.gholts.Sphere" \
+            --arg marketplaceID "" \
+            --arg developerName "Hugo Lee" \
+            --arg appSubtitle "Proxy controller client" \
+            --arg appDescription "Sphere is an iOS app for managing LAN controller profiles." \
+            --arg appIconURL "https://github.com/user-attachments/assets/86577a94-7e6f-4b31-b18e-f7a7271c4ad7" \
+            --arg category "utilities" \
             '
-            ($versions[0][0]) as $latest
-            | {
+            {
               name: $sourceName,
-              identifier: $sourceIdentifier,
-              iconURL: $iconURL,
+              subtitle: $sourceSubtitle,
+              description: $sourceDescription,
+              iconURL: $sourceIconURL,
               website: $website,
+              patreonURL: $patreonURL,
+              tintColor: $tintColor,
+              featuredApps: [
+                $bundleIdentifier
+              ],
               apps: [
                 {
                   name: $appName,
                   bundleIdentifier: $bundleIdentifier,
+                  marketplaceID: $marketplaceID,
                   developerName: $developerName,
-                  iconURL: $iconURL,
-                  localizedDescription: "Sphere is an iOS app for managing LAN controller profiles.",
-                  subtitle: "Proxy controller client",
+                  subtitle: $appSubtitle,
+                  localizedDescription: $appDescription,
+                  iconURL: $appIconURL,
                   tintColor: $tintColor,
+                  category: $category,
+                  screenshots: [],
                   versions: $versions[0],
-                  appPermissions: {},
-
-                  version: $latest.version,
-                  versionDate: $latest.date,
-                  size: $latest.size,
-                  downloadURL: $latest.downloadURL
+                  appPermissions: {
+                    entitlements: [],
+                    privacy: {
+                      NSLocalNetworkUsageDescription: "Sphere connects to LAN controllers on your local network."
+                    }
+                  },
+                  patreon: {}
                 }
               ],
+              "news": []
             }
             ' > site/altstore/release.json
 
