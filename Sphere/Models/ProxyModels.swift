@@ -15,7 +15,7 @@ nonisolated struct ProxyItem: Identifiable, Equatable, Codable, Sendable {
     var providerName: String?
     var hidden: Bool?
     var delay: Int?
-    
+
     enum CodingKeys: String, CodingKey {
         case name
         case type
@@ -32,7 +32,7 @@ nonisolated struct ProxyItem: Identifiable, Equatable, Codable, Sendable {
         case history
         case delay
     }
-    
+
     init(
         name: String,
         type: String,
@@ -62,7 +62,7 @@ nonisolated struct ProxyItem: Identifiable, Equatable, Codable, Sendable {
         self.hidden = hidden
         self.delay = delay
     }
-    
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         name = try container.decodeIfPresent(String.self, forKey: .name) ?? ""
@@ -80,7 +80,7 @@ nonisolated struct ProxyItem: Identifiable, Equatable, Codable, Sendable {
         let history = try container.decodeIfPresent([DelayHistory].self, forKey: .history) ?? []
         delay = try container.decodeIfPresent(Int.self, forKey: .delay) ?? history.last?.delay
     }
-    
+
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(name, forKey: .name)
@@ -97,11 +97,11 @@ nonisolated struct ProxyItem: Identifiable, Equatable, Codable, Sendable {
         try container.encodeIfPresent(hidden, forKey: .hidden)
         try container.encodeIfPresent(delay, forKey: .delay)
     }
-    
+
     var isGroup: Bool {
         !all.isEmpty
     }
-    
+
     var metaBadges: [String] {
         var badges: [String] = []
         badges.append(type)
@@ -125,21 +125,21 @@ nonisolated struct DelayHistory: Codable, Equatable, Sendable {
 nonisolated struct ProxyCollection: Codable, Equatable, Sendable {
     var proxies: [ProxyItem]
     var groups: [ProxyItem]
-    
+
     enum CodingKeys: String, CodingKey {
         case proxies
         case groups
     }
-    
+
     init(proxies: [ProxyItem] = [], groups: [ProxyItem] = []) {
         self.proxies = proxies
         self.groups = groups
     }
-    
+
     func item(named name: String) -> ProxyItem? {
         proxies.first { $0.name == name } ?? groups.first { $0.name == name }
     }
-    
+
     func applyingDelayResults(_ delays: [String: Int]) -> Self {
         guard !delays.isEmpty else { return self }
         return Self(
@@ -147,7 +147,7 @@ nonisolated struct ProxyCollection: Codable, Equatable, Sendable {
             groups: groups.map { $0.applyingDelayResult(delays[$0.name]) }
         )
     }
-    
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         if let cachedGroups = try container.decodeIfPresent([ProxyItem].self, forKey: .groups) {
@@ -155,15 +155,21 @@ nonisolated struct ProxyCollection: Codable, Equatable, Sendable {
             groups = cachedGroups
             return
         }
-        
+
         let values = try container.nestedContainer(keyedBy: DynamicCodingKey.self, forKey: .proxies)
-        let orderedProxies = try values.allKeys.map { try values.decode(ProxyItem.self, forKey: $0) }
+        let orderedProxies = try values.allKeys.map {
+            try values.decode(ProxyItem.self, forKey: $0)
+        }
         proxies = orderedProxies.filter { !$0.isGroup }
-        
+
         let groupCandidates = orderedProxies.filter(\.isGroup)
         if let global = orderedProxies.first(where: { $0.name == "GLOBAL" }), !global.all.isEmpty {
-            let sourceOrder = Dictionary(uniqueKeysWithValues: groupCandidates.enumerated().map { ($0.element.name, $0.offset) })
-            let globalOrder = Dictionary(uniqueKeysWithValues: global.all.enumerated().map { ($0.element, $0.offset) })
+            let sourceOrder = Dictionary(
+                uniqueKeysWithValues: groupCandidates.enumerated().map {
+                    ($0.element.name, $0.offset)
+                })
+            let globalOrder = Dictionary(
+                uniqueKeysWithValues: global.all.enumerated().map { ($0.element, $0.offset) })
             groups = groupCandidates.sorted { left, right in
                 if left.name == "GLOBAL" { return true }
                 if right.name == "GLOBAL" { return false }
@@ -182,7 +188,7 @@ nonisolated struct ProxyCollection: Codable, Equatable, Sendable {
             groups = groupCandidates
         }
     }
-    
+
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(proxies, forKey: .proxies)
@@ -190,7 +196,7 @@ nonisolated struct ProxyCollection: Codable, Equatable, Sendable {
     }
 }
 
-private extension ProxyItem {
+fileprivate extension ProxyItem {
     nonisolated func applyingDelayResult(_ delay: Int?) -> ProxyItem {
         guard let delay else { return self }
         var copy = self
@@ -209,12 +215,12 @@ nonisolated struct ProxyProvider: Identifiable, Codable, Equatable, Sendable {
     var usedBytes: Int64?
     var totalBytes: Int64?
     var proxies: [ProxyItem]
-    
+
     var remainingBytes: Int64? {
         guard let usedBytes, let totalBytes else { return nil }
         return max(0, totalBytes - usedBytes)
     }
-    
+
     enum CodingKeys: String, CodingKey {
         case name
         case type
@@ -226,7 +232,7 @@ nonisolated struct ProxyProvider: Identifiable, Codable, Equatable, Sendable {
         case proxies
         case subscriptionInfo
     }
-    
+
     init(
         name: String,
         type: String? = nil,
@@ -246,7 +252,7 @@ nonisolated struct ProxyProvider: Identifiable, Codable, Equatable, Sendable {
         self.totalBytes = totalBytes
         self.proxies = proxies
     }
-    
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         name = try container.decodeIfPresent(String.self, forKey: .name) ?? ""
@@ -257,9 +263,10 @@ nonisolated struct ProxyProvider: Identifiable, Codable, Equatable, Sendable {
         let info = try container.decodeIfPresent(SubscriptionInfo.self, forKey: .subscriptionInfo)
         expireAt = try container.decodeIfPresent(Date.self, forKey: .expireAt) ?? info?.expireAt
         usedBytes = try container.decodeIfPresent(Int64.self, forKey: .usedBytes) ?? info?.usedBytes
-        totalBytes = try container.decodeIfPresent(Int64.self, forKey: .totalBytes) ?? info?.totalBytes
+        totalBytes =
+            try container.decodeIfPresent(Int64.self, forKey: .totalBytes) ?? info?.totalBytes
     }
-    
+
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(name, forKey: .name)
@@ -275,18 +282,19 @@ nonisolated struct ProxyProvider: Identifiable, Codable, Equatable, Sendable {
 
 nonisolated struct ProviderCollection<T: Decodable & Identifiable & Equatable>: Decodable, Equatable {
     var providers: [T]
-    
+
     enum CodingKeys: String, CodingKey {
         case providers
     }
-    
+
     init(providers: [T] = []) {
         self.providers = providers
     }
-    
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        if let values = try? container.nestedContainer(keyedBy: DynamicCodingKey.self, forKey: .providers) {
+        if let values = try? container.nestedContainer(
+            keyedBy: DynamicCodingKey.self, forKey: .providers) {
             providers = try values.allKeys.map { try values.decode(T.self, forKey: $0) }
         } else {
             providers = try container.decodeIfPresent([T].self, forKey: .providers) ?? []
@@ -299,7 +307,7 @@ nonisolated struct SubscriptionInfo: Codable, Equatable, Sendable {
     var download: Int64?
     var total: Int64?
     var expire: Int64?
-    
+
     var usedBytes: Int64? {
         switch (upload, download) {
         case let (.some(upload), .some(download)):
@@ -312,19 +320,19 @@ nonisolated struct SubscriptionInfo: Codable, Equatable, Sendable {
             return nil
         }
     }
-    
+
     var totalBytes: Int64? { total }
-    
+
     var remainingBytes: Int64? {
         guard let usedBytes, let total else { return nil }
         return max(0, total - usedBytes)
     }
-    
+
     var expireAt: Date? {
         guard let expire, expire > 0 else { return nil }
         return Date(timeIntervalSince1970: TimeInterval(expire))
     }
-    
+
     enum CodingKeys: String, CodingKey {
         case upload
         case download
@@ -335,15 +343,23 @@ nonisolated struct SubscriptionInfo: Codable, Equatable, Sendable {
         case upperTotal = "Total"
         case upperExpire = "Expire"
     }
-    
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        upload = try container.decodeIfPresent(Int64.self, forKey: .upload) ?? container.decodeIfPresent(Int64.self, forKey: .upperUpload)
-        download = try container.decodeIfPresent(Int64.self, forKey: .download) ?? container.decodeIfPresent(Int64.self, forKey: .upperDownload)
-        total = try container.decodeIfPresent(Int64.self, forKey: .total) ?? container.decodeIfPresent(Int64.self, forKey: .upperTotal)
-        expire = try container.decodeIfPresent(Int64.self, forKey: .expire) ?? container.decodeIfPresent(Int64.self, forKey: .upperExpire)
+        upload =
+            try container.decodeIfPresent(Int64.self, forKey: .upload)
+            ?? container.decodeIfPresent(Int64.self, forKey: .upperUpload)
+        download =
+            try container.decodeIfPresent(Int64.self, forKey: .download)
+            ?? container.decodeIfPresent(Int64.self, forKey: .upperDownload)
+        total =
+            try container.decodeIfPresent(Int64.self, forKey: .total)
+            ?? container.decodeIfPresent(Int64.self, forKey: .upperTotal)
+        expire =
+            try container.decodeIfPresent(Int64.self, forKey: .expire)
+            ?? container.decodeIfPresent(Int64.self, forKey: .upperExpire)
     }
-    
+
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encodeIfPresent(upload, forKey: .upload)
@@ -356,7 +372,8 @@ nonisolated struct SubscriptionInfo: Codable, Equatable, Sendable {
 extension Array where Element == ProxyProvider {
     nonisolated var visibleProxyProviders: [ProxyProvider] {
         filter { provider in
-            provider.name != "default" && provider.vehicleType?.caseInsensitiveCompare("Compatible") != .orderedSame
+            provider.name != "default"
+                && provider.vehicleType?.caseInsensitiveCompare("Compatible") != .orderedSame
         }
         .map { provider in
             var copy = provider

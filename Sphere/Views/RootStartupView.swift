@@ -2,8 +2,7 @@ import SwiftUI
 
 struct RootStartupView: View {
     var body: some View {
-        ProgressView()
-            .controlSize(.large)
+        Color.clear
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(.background)
             .accessibilityLabel("Starting Sphere")

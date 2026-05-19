@@ -12,7 +12,7 @@ extension AppModel {
         }
         await finishRefresh(outcome, source: source)
     }
-    
+
     func closeConnection(_ id: String) async {
         guard let client else { return }
         _ = await captureErrors {
@@ -21,7 +21,7 @@ extension AppModel {
             saveCachedDataIfUseful()
         }
     }
-    
+
     func closeAllConnections() async {
         guard let client else { return }
         _ = await captureErrors {

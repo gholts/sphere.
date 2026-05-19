@@ -3,7 +3,7 @@ import SwiftUI
 struct ProxiesView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    
+
     private var proxyColumns: [GridItem] {
         [
             GridItem(
@@ -12,13 +12,16 @@ struct ProxiesView: View {
             ),
         ]
     }
-    
+
     var body: some View {
         NavigationStack {
             List {
                 if app.proxyCollection.groups.isEmpty {
-                    EmptyStateView(title: "No Proxy Groups", message: "Refresh after backend connects.", systemImage: "point.3.connected.trianglepath.dotted")
-                        .listRowBackground(Color.clear)
+                    EmptyStateView(
+                        title: "No Proxy Groups", message: "Refresh after backend connects.",
+                        systemImage: "point.3.connected.trianglepath.dotted"
+                    )
+                    .listRowBackground(Color.clear)
                 } else {
                     if app.selectedProfile?.kind.showsProxyProviders == true {
                         Section("Providers") {
@@ -34,7 +37,7 @@ struct ProxiesView: View {
                             }
                         }
                     }
-                    
+
                     Section {
                         ForEach(app.proxyCollection.groups) { group in
                             ProxyGroupSection(group: group, proxyColumns: proxyColumns)
@@ -46,10 +49,12 @@ struct ProxiesView: View {
                             HStack(spacing: 8) {
                                 ProxyGroupExpansionButton(
                                     title: expansionActionTitle,
-                                    symbol: expansionActionSymbol
+                                    isExpanded: allProxyGroupsExpanded
                                 ) {
                                     withAnimation(.smooth(duration: 0.28)) {
-                                        app.setAllProxyGroupsExpanded(!allProxyGroupsExpanded, groups: app.proxyCollection.groups)
+                                        app.setAllProxyGroupsExpanded(
+                                            !allProxyGroupsExpanded,
+                                            groups: app.proxyCollection.groups)
                                     }
                                 }
                                 ProxyGroupSpeedTestButton(isTesting: app.isTestingProxyGroupDelays) {
@@ -67,31 +72,32 @@ struct ProxiesView: View {
             }
         }
     }
-    
+
     private var allProxyGroupsExpanded: Bool {
-        app.areAllProxyGroupsExpanded(app.proxyCollection.groups)
+        _ = app.proxyGroupExpansionRevision
+        return app.areAllProxyGroupsExpanded(app.proxyCollection.groups)
     }
-    
+
     private var expansionActionTitle: String {
         allProxyGroupsExpanded ? "Collapse All" : "Expand All"
-    }
-    
-    private var expansionActionSymbol: String {
-        allProxyGroupsExpanded ? "chevron.up" : "chevron.down"
     }
 }
 
 struct ProxyGroupExpansionButton: View {
     var title: String
-    var symbol: String
+    var isExpanded: Bool
     var action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 4) {
                 Text(title)
                     .frame(width: 64, alignment: .trailing)
-                Image(systemName: symbol)
+                    .transaction { transaction in
+                        transaction.animation = nil
+                    }
+                Image(systemName: "chevron.down")
+                    .rotationEffect(.degrees(isExpanded ? 180 : 0))
                     .frame(width: 12, alignment: .trailing)
                     .accessibilityHidden(true)
             }
@@ -99,9 +105,7 @@ struct ProxyGroupExpansionButton: View {
             .frame(minWidth: 44, minHeight: 44, alignment: .center)
             .font(.caption2)
             .contentShape(.rect)
-            .transaction { transaction in
-                transaction.animation = nil
-            }
+            .animation(.smooth(duration: 0.28), value: isExpanded)
         }
         .buttonStyle(.plain)
         .foregroundStyle(.secondary)
@@ -112,7 +116,7 @@ struct ProxyGroupExpansionButton: View {
 struct ProxyGroupSpeedTestButton: View {
     var isTesting: Bool
     var action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             ZStack {
@@ -143,7 +147,7 @@ struct ProxyGroupSection: View {
     @State private var isExpanded = false
     var group: ProxyItem
     var proxyColumns: [GridItem]
-    
+
     var body: some View {
         Section {
             DisclosureGroup(isExpanded: $isExpanded) {
@@ -195,7 +199,7 @@ struct ProxyGroupSection: View {
 struct ProxyProviderRow: View {
     var provider: ProxyProvider
     var refresh: () -> Void
-    
+
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
@@ -206,7 +210,9 @@ struct ProxyProviderRow: View {
                         .foregroundStyle(.secondary)
                 }
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Remains data: \(ByteFormat.bytes(provider.remainingBytes)) / \(ByteFormat.bytes(provider.totalBytes))")
+                    Text(
+                        "Remains data: \(ByteFormat.bytes(provider.remainingBytes)) / \(ByteFormat.bytes(provider.totalBytes))"
+                    )
                     Text("Expire: \(DateFormat.expire(provider.expireAt))")
                 }
                 .font(.caption)
@@ -227,7 +233,7 @@ struct ProxyChoiceButton: View {
     var proxy: ProxyItem?
     var isSelected: Bool
     var action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 4) {
@@ -244,7 +250,7 @@ struct ProxyChoiceButton: View {
                         .frame(width: 14)
                         .accessibilityHidden(!isSelected)
                 }
-                
+
                 if let proxy {
                     HStack(spacing: 6) {
                         ProxyMetaLine(proxy: proxy)
@@ -262,13 +268,14 @@ struct ProxyChoiceButton: View {
             .clipShape(.rect(cornerRadius: 16))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("\(proxy?.displayName ?? name.backendNameForDisplay)\(isSelected ? ", selected" : "")")
+        .accessibilityLabel(
+            "\(proxy?.displayName ?? name.backendNameForDisplay)\(isSelected ? ", selected" : "")")
     }
 }
 
 struct ProxyDelayBadge: View {
     var delay: Int?
-    
+
     var body: some View {
         Group {
             if let delay {
@@ -287,7 +294,7 @@ struct ProxyDelayBadge: View {
         }
         .frame(width: 50, height: 18, alignment: .trailing)
     }
-    
+
     private func label(for delay: Int) -> String {
         delay > 0 ? "\(delay) ms" : "Timeout"
     }
@@ -295,7 +302,7 @@ struct ProxyDelayBadge: View {
 
 struct ProxyMetaLine: View {
     var proxy: ProxyItem
-    
+
     var body: some View {
         Text(verbatim: proxy.metaBadges.map(\.backendNameForDisplay).joined(separator: " · "))
             .font(.caption2)

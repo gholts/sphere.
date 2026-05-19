@@ -2,7 +2,7 @@ import Foundation
 
 nonisolated protocol ProxyBackendClient: Sendable {
     var profile: APIProfile { get }
-    
+
     func testConnection() async throws -> BackendOverview
     func version() async throws -> String
     func overview() async throws -> BackendOverview
@@ -43,39 +43,81 @@ nonisolated enum BackendClientFactory {
 
 nonisolated struct UnsupportedBackendClient: ProxyBackendClient {
     var profile: APIProfile
-    
-    func testConnection() throws -> BackendOverview { throw BackendError.unsupportedBackend(profile.kind.title) }
+
+    func testConnection() throws -> BackendOverview {
+        throw BackendError.unsupportedBackend(profile.kind.title)
+    }
     func version() throws -> String { throw BackendError.unsupportedBackend(profile.kind.title) }
-    func overview() throws -> BackendOverview { throw BackendError.unsupportedBackend(profile.kind.title) }
-    func configs() throws -> [String: JSONValue] { throw BackendError.unsupportedBackend(profile.kind.title) }
-    func patchConfigs(_: [String: JSONValue]) throws { throw BackendError.unsupportedBackend(profile.kind.title) }
+    func overview() throws -> BackendOverview {
+        throw BackendError.unsupportedBackend(profile.kind.title)
+    }
+    func configs() throws -> [String: JSONValue] {
+        throw BackendError.unsupportedBackend(profile.kind.title)
+    }
+    func patchConfigs(_: [String: JSONValue]) throws {
+        throw BackendError.unsupportedBackend(profile.kind.title)
+    }
     func reloadConfig() throws { throw BackendError.unsupportedBackend(profile.kind.title) }
-    func clashMode() throws -> ClashMode { throw BackendError.unsupportedBackend(profile.kind.title) }
-    func updateClashMode(_: ClashMode) throws { throw BackendError.unsupportedBackend(profile.kind.title) }
-    func proxies() throws -> ProxyCollection { throw BackendError.unsupportedBackend(profile.kind.title) }
-    func selectProxy(group _: String, proxy _: String) throws { throw BackendError.unsupportedBackend(profile.kind.title) }
-    func delayProxy(_: String, url _: String, timeout _: Int) throws -> Int? { throw BackendError.unsupportedBackend(profile.kind.title) }
-    func delayProxyGroup(_: String, url _: String, timeout _: Int) throws -> [String: Int] { throw BackendError.unsupportedBackend(profile.kind.title) }
-    func proxyProviders() throws -> [ProxyProvider] { throw BackendError.unsupportedBackend(profile.kind.title) }
-    func refreshProxyProvider(_: String) throws { throw BackendError.unsupportedBackend(profile.kind.title) }
+    func clashMode() throws -> ClashMode {
+        throw BackendError.unsupportedBackend(profile.kind.title)
+    }
+    func updateClashMode(_: ClashMode) throws {
+        throw BackendError.unsupportedBackend(profile.kind.title)
+    }
+    func proxies() throws -> ProxyCollection {
+        throw BackendError.unsupportedBackend(profile.kind.title)
+    }
+    func selectProxy(group _: String, proxy _: String) throws {
+        throw BackendError.unsupportedBackend(profile.kind.title)
+    }
+    func delayProxy(_: String, url _: String, timeout _: Int) throws -> Int? {
+        throw BackendError.unsupportedBackend(profile.kind.title)
+    }
+    func delayProxyGroup(_: String, url _: String, timeout _: Int) throws -> [String: Int] {
+        throw BackendError.unsupportedBackend(profile.kind.title)
+    }
+    func proxyProviders() throws -> [ProxyProvider] {
+        throw BackendError.unsupportedBackend(profile.kind.title)
+    }
+    func refreshProxyProvider(_: String) throws {
+        throw BackendError.unsupportedBackend(profile.kind.title)
+    }
     func rules() throws -> [RuleItem] { throw BackendError.unsupportedBackend(profile.kind.title) }
-    func ruleProviders() throws -> [RuleProvider] { throw BackendError.unsupportedBackend(profile.kind.title) }
-    func refreshRuleProvider(_: String) throws { throw BackendError.unsupportedBackend(profile.kind.title) }
-    func connections() throws -> ConnectionsSnapshot { throw BackendError.unsupportedBackend(profile.kind.title) }
-    func closeConnection(_: String) throws { throw BackendError.unsupportedBackend(profile.kind.title) }
+    func ruleProviders() throws -> [RuleProvider] {
+        throw BackendError.unsupportedBackend(profile.kind.title)
+    }
+    func refreshRuleProvider(_: String) throws {
+        throw BackendError.unsupportedBackend(profile.kind.title)
+    }
+    func connections() throws -> ConnectionsSnapshot {
+        throw BackendError.unsupportedBackend(profile.kind.title)
+    }
+    func closeConnection(_: String) throws {
+        throw BackendError.unsupportedBackend(profile.kind.title)
+    }
     func closeAllConnections() throws { throw BackendError.unsupportedBackend(profile.kind.title) }
-    func upgradeCore(channel _: CoreUpdateChannel) throws { throw BackendError.unsupportedBackend(profile.kind.title) }
+    func upgradeCore(channel _: CoreUpdateChannel) throws {
+        throw BackendError.unsupportedBackend(profile.kind.title)
+    }
     func logs(level _: LogLevel) -> AsyncThrowingStream<LogEntry, Error> {
-        AsyncThrowingStream { continuation in continuation.finish(throwing: BackendError.unsupportedBackend(profile.kind.title)) }
+        AsyncThrowingStream { continuation in
+            continuation.finish(throwing: BackendError.unsupportedBackend(profile.kind.title))
+        }
     }
     func connectionEvents(interval _: Int) -> AsyncThrowingStream<ConnectionsSnapshot, Error> {
-        AsyncThrowingStream { continuation in continuation.finish(throwing: BackendError.unsupportedBackend(profile.kind.title)) }
+        AsyncThrowingStream { continuation in
+            continuation.finish(throwing: BackendError.unsupportedBackend(profile.kind.title))
+        }
     }
     func memoryEvents() -> AsyncThrowingStream<MemorySnapshot, Error> {
-        AsyncThrowingStream { continuation in continuation.finish(throwing: BackendError.unsupportedBackend(profile.kind.title)) }
+        AsyncThrowingStream { continuation in
+            continuation.finish(throwing: BackendError.unsupportedBackend(profile.kind.title))
+        }
     }
     func trafficEvents() -> AsyncThrowingStream<TrafficSnapshot, Error> {
-        AsyncThrowingStream { continuation in continuation.finish(throwing: BackendError.unsupportedBackend(profile.kind.title)) }
+        AsyncThrowingStream { continuation in
+            continuation.finish(throwing: BackendError.unsupportedBackend(profile.kind.title))
+        }
     }
 }
 
@@ -90,7 +132,7 @@ nonisolated enum BackendError: LocalizedError, Equatable, Sendable {
     case invalidResponse
     case httpStatus(Int, String)
     case unsupportedBackend(String)
-    
+
     var errorDescription: String? {
         switch self {
         case .invalidBaseURL:
@@ -106,8 +148,10 @@ nonisolated enum BackendError: LocalizedError, Equatable, Sendable {
 }
 
 nonisolated private enum HTTPErrorBodyDisplay {
-    nonisolated private static let preferredKeys = ["message", "error", "detail", "reason", "description"]
-    
+    nonisolated private static let preferredKeys = [
+        "message", "error", "detail", "reason", "description",
+    ]
+
     nonisolated static func message(from body: String) -> String {
         let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
         guard
@@ -116,10 +160,10 @@ nonisolated private enum HTTPErrorBodyDisplay {
         else {
             return trimmed
         }
-        
+
         return message(fromJSONObject: object) ?? trimmed
     }
-    
+
     nonisolated private static func message(fromJSONObject object: Any) -> String? {
         if let text = object as? String {
             return text
@@ -150,7 +194,9 @@ nonisolated struct URLRequestFactory {
         body: Data? = nil,
         timeoutInterval: TimeInterval = 8
     ) throws -> URLRequest {
-        guard var components = URLComponents(string: URLNormalizer.normalizedBaseURL(profile.baseURL)) else {
+        guard
+            var components = URLComponents(string: URLNormalizer.normalizedBaseURL(profile.baseURL))
+        else {
             throw BackendError.invalidBaseURL
         }
         components.percentEncodedPath += path
@@ -160,7 +206,8 @@ nonisolated struct URLRequestFactory {
         guard let url = components.url else {
             throw BackendError.invalidBaseURL
         }
-        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: timeoutInterval)
+        var request = URLRequest(
+            url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: timeoutInterval)
         request.httpMethod = method
         if !profile.secret.isEmpty {
             request.setValue("Bearer \(profile.secret)", forHTTPHeaderField: "Authorization")

@@ -8,17 +8,17 @@ final class LiveState {
     var connections = ConnectionsSnapshot(uploadTotal: nil, downloadTotal: nil, connections: [])
     var logs: [LogEntry] = []
     var logLevel: LogLevel = .info
-    
+
     func resetBackendData() {
         overview = .empty
         connections = ConnectionsSnapshot(uploadTotal: nil, downloadTotal: nil, connections: [])
     }
-    
+
     func resetLogs() {
         logs = []
         logLevel = .info
     }
-    
+
     func reset() {
         resetBackendData()
         resetLogs()

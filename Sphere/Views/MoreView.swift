@@ -6,7 +6,7 @@ struct MoreView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var profileForm: ProfileFormPresentation?
     @State private var coreUpdateDialog: CoreUpdateDialog?
-    
+
     var body: some View {
         NavigationStack {
             List {
@@ -16,14 +16,14 @@ struct MoreView: View {
                             Text(profile.name).tag(Optional(profile.id))
                         }
                     }
-                    
+
                     Button {
                         profileForm = .add
                     } label: {
                         Label("Add Profile", systemImage: "plus.circle")
                     }
                 }
-                
+
                 Section("Overview") {
                     Picker(selection: modeBinding) {
                         ForEach(ClashMode.allCases) { mode in
@@ -33,10 +33,10 @@ struct MoreView: View {
                         Text("Mode")
                             .foregroundStyle(.secondary)
                     }
-                    
+
                     OverviewRows(overview: live.overview)
                 }
-                
+
                 if app.canUpdateCore {
                     Section("Update Core") {
                         ForEach(CoreUpdateChannel.allCases) { channel in
@@ -53,21 +53,21 @@ struct MoreView: View {
                         }
                     }
                 }
-                
+
                 Section("Tools") {
                     NavigationLink {
                         ConfigEditorView()
                     } label: {
                         Label("Configuration", systemImage: "slider.horizontal.3")
                     }
-                    
+
                     NavigationLink {
                         LogBookView()
                     } label: {
                         Label("Log Book", systemImage: "doc.text.magnifyingglass")
                     }
                 }
-                
+
                 Section("Profiles") {
                     ForEach(app.profiles) { profile in
                         Button {
@@ -106,21 +106,21 @@ struct MoreView: View {
             }
         }
     }
-    
+
     private var profileBinding: Binding<UUID?> {
         Binding(
             get: { app.selectedProfileID },
             set: { app.selectProfile($0) }
         )
     }
-    
+
     private var modeBinding: Binding<ClashMode> {
         Binding(
             get: { app.clashMode },
             set: { mode in Task { await app.updateMode(mode) } }
         )
     }
-    
+
     private func startCoreUpdate(channel: CoreUpdateChannel) {
         coreUpdateDialog = CoreUpdateDialog(channel: channel, phase: .updating)
         Task { @MainActor in
@@ -135,17 +135,17 @@ private struct CoreUpdateDialog: Identifiable, Equatable {
         case updating
         case finished(CoreUpdateReport)
     }
-    
+
     var channel: CoreUpdateChannel
     var phase: Phase
-    
+
     var id: String { channel.id }
-    
+
     var isUpdating: Bool {
         if case .updating = phase { return true }
         return false
     }
-    
+
     var title: String {
         switch phase {
         case .updating:
@@ -154,7 +154,7 @@ private struct CoreUpdateDialog: Identifiable, Equatable {
             return report.title
         }
     }
-    
+
     var message: String {
         switch phase {
         case .updating:
@@ -163,7 +163,7 @@ private struct CoreUpdateDialog: Identifiable, Equatable {
             return report.message
         }
     }
-    
+
     var systemImage: String {
         switch phase {
         case .updating:
@@ -172,7 +172,7 @@ private struct CoreUpdateDialog: Identifiable, Equatable {
             return report.systemImage
         }
     }
-    
+
     var iconStyle: Color {
         switch phase {
         case .updating:
@@ -193,11 +193,11 @@ private struct CoreUpdateDialog: Identifiable, Equatable {
 private struct CoreUpdateDialogView: View {
     @Environment(\.dismiss) private var dismiss
     var dialog: CoreUpdateDialog
-    
+
     var body: some View {
         VStack(spacing: 16) {
             CoreUpdateDialogIcon(dialog: dialog)
-            
+
             VStack(spacing: 8) {
                 Text(dialog.title)
                     .font(.headline)
@@ -206,7 +206,7 @@ private struct CoreUpdateDialogView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
-            
+
             if !dialog.isUpdating {
                 Button("OK") {
                     dismiss()
@@ -223,7 +223,7 @@ private struct CoreUpdateDialogView: View {
 
 private struct CoreUpdateDialogIcon: View {
     var dialog: CoreUpdateDialog
-    
+
     var body: some View {
         if dialog.isUpdating {
             ProgressView()
@@ -240,14 +240,18 @@ private struct CoreUpdateDialogIcon: View {
 
 struct OverviewRows: View {
     var overview: BackendOverview
-    
+
     var body: some View {
         AdaptiveStatRows(metrics: [
             StatMetric(title: "Version", value: overview.version),
             StatMetric(title: "Memory", value: ByteFormat.memoryBytes(overview.memoryBytes)),
-            StatMetric(title: "Upload", value: ByteFormat.speedBytes(overview.uploadBytesPerSecond)),
-            StatMetric(title: "Download", value: ByteFormat.speedBytes(overview.downloadBytesPerSecond)),
-            StatMetric(title: "Active Connections", value: overview.activeConnections.map(String.init) ?? "n/a"),
+            StatMetric(
+                title: "Upload", value: ByteFormat.speedBytes(overview.uploadBytesPerSecond)),
+            StatMetric(
+                title: "Download", value: ByteFormat.speedBytes(overview.downloadBytesPerSecond)),
+            StatMetric(
+                title: "Active Connections",
+                value: overview.activeConnections.map(String.init) ?? "n/a"),
         ])
     }
 }

@@ -12,20 +12,21 @@ extension AppModel {
             scheduleCacheSave()
         }
     }
-    
+
     func updateMemory(_ memoryBytes: Int) {
         guard overview.memoryBytes != memoryBytes else { return }
         overview.memoryBytes = memoryBytes
         scheduleCacheSave()
     }
-    
+
     func updateTraffic(upload: Int, download: Int) {
-        guard overview.uploadBytesPerSecond != upload || overview.downloadBytesPerSecond != download else { return }
+        guard overview.uploadBytesPerSecond != upload || overview.downloadBytesPerSecond != download
+        else { return }
         overview.uploadBytesPerSecond = upload
         overview.downloadBytesPerSecond = download
         scheduleCacheSave()
     }
-    
+
     func resetLoadedData() {
         pendingBackendErrorMessage = nil
         pendingCacheSave = false
@@ -42,29 +43,29 @@ extension AppModel {
         proxyStore.reset()
         configStore.reset()
     }
-    
+
     func proxyGroupExpandedKey(_ groupName: String) -> String {
         proxyStore.proxyGroupExpandedKey(groupName, profileID: selectedProfileID)
     }
-    
+
     @discardableResult
     func setProxyCollection(_ collection: ProxyCollection) -> Bool {
         proxyStore.setProxyCollection(collection, profileID: selectedProfileID)
     }
-    
+
     @discardableResult
     func setProxyProviders(_ providers: [ProxyProvider]) -> Bool {
         proxyStore.setProxyProviders(providers)
     }
-    
+
     func proxyItem(named name: String) -> ProxyItem? {
         proxyStore.proxyItem(named: name)
     }
-    
+
     func rebuildProxyLookup() {
         proxyStore.rebuildProxyLookup()
     }
-    
+
     func applyOverviewStats(_ nextOverview: BackendOverview) {
         var didChange = false
         if let uptime = nextOverview.uptime, overview.uptime != uptime {
@@ -75,15 +76,18 @@ extension AppModel {
             overview.memoryBytes = memoryBytes
             didChange = true
         }
-        if let uploadBytesPerSecond = nextOverview.uploadBytesPerSecond, overview.uploadBytesPerSecond != uploadBytesPerSecond {
+        if let uploadBytesPerSecond = nextOverview.uploadBytesPerSecond,
+            overview.uploadBytesPerSecond != uploadBytesPerSecond {
             overview.uploadBytesPerSecond = uploadBytesPerSecond
             didChange = true
         }
-        if let downloadBytesPerSecond = nextOverview.downloadBytesPerSecond, overview.downloadBytesPerSecond != downloadBytesPerSecond {
+        if let downloadBytesPerSecond = nextOverview.downloadBytesPerSecond,
+            overview.downloadBytesPerSecond != downloadBytesPerSecond {
             overview.downloadBytesPerSecond = downloadBytesPerSecond
             didChange = true
         }
-        if let activeConnections = nextOverview.activeConnections, overview.activeConnections != activeConnections {
+        if let activeConnections = nextOverview.activeConnections,
+            overview.activeConnections != activeConnections {
             overview.activeConnections = activeConnections
             didChange = true
         }
@@ -91,12 +95,12 @@ extension AppModel {
             scheduleCacheSave()
         }
     }
-    
+
     func applyVersion(_ version: String) {
         guard version != overview.version else { return }
         overview.version = version
     }
-    
+
     func applyConfigs(_ values: [String: JSONValue]) {
         configStore.applyConfigs(values)
     }

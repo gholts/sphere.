@@ -3,15 +3,18 @@ import SwiftUI
 struct RuleView: View {
     @Environment(AppModel.self) private var app
     @State private var refreshingRuleSetNames: Set<String> = []
-    
+
     var body: some View {
         NavigationStack {
             let providers = ruleProviderLookup
             List {
                 Section("Rules") {
                     if app.rules.isEmpty {
-                        EmptyStateView(title: "No Rules", message: "Backend returned no rule data.", systemImage: "list.bullet.rectangle")
-                            .listRowBackground(Color.clear)
+                        EmptyStateView(
+                            title: "No Rules", message: "Backend returned no rule data.",
+                            systemImage: "list.bullet.rectangle"
+                        )
+                        .listRowBackground(Color.clear)
                     } else {
                         ForEach(app.rules) { rule in
                             RuleRow(
@@ -30,11 +33,11 @@ struct RuleView: View {
             }
         }
     }
-    
+
     private var ruleProviderLookup: [String: RuleProvider] {
         Dictionary(app.ruleProviders.map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
     }
-    
+
     private func refreshRuleSet(_ name: String) {
         guard !refreshingRuleSetNames.contains(name) else { return }
         refreshingRuleSetNames.insert(name)
@@ -52,7 +55,7 @@ private struct RuleRow: View {
     var provider: RuleProvider?
     var isRefreshing: Bool
     var refresh: () -> Void
-    
+
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
@@ -86,7 +89,7 @@ private struct RuleRow: View {
 private struct RuleMetadataRow: View {
     var rule: RuleItem
     var provider: RuleProvider?
-    
+
     var body: some View {
         if rule.isMatch {
             Text(verbatim: rule.proxy.backendNameForDisplay)

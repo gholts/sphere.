@@ -10,7 +10,7 @@ extension AppModel {
             saveCachedDataIfUseful()
         }
     }
-    
+
     func refreshProxyProvider(_ name: String) async {
         guard let client else { return }
         _ = await captureErrors {
@@ -19,32 +19,34 @@ extension AppModel {
             saveCachedDataIfUseful()
         }
     }
-    
+
     func testProxyGroupDelays() async {
         guard let client, !isTestingProxyGroupDelays else { return }
         let groupNames = proxyCollection.groups.map(\.name)
         guard !groupNames.isEmpty else { return }
-        
+
         proxyStore.isTestingProxyGroupDelays = true
         defer { proxyStore.isTestingProxyGroupDelays = false }
-        
+
         await progressActivityReporter.start(
             kind: .latencyTest,
             detail: "0/\(groupNames.count) groups",
             fraction: 0
         )
-        
+
         let outcome = await captureErrors {
             var didChange = false
             let delays = try await delayProxyGroups(client: client, groupNames: groupNames) { completed, total in
                 await self.progressActivityReporter.update(
                     kind: .latencyTest,
                     detail: "\(completed)/\(total) groups",
-                    fraction: Double(completed) / Double(total) * ProgressActivityFractions.latencyGroupTestingWeight
+                    fraction: Double(completed) / Double(total)
+                    * ProgressActivityFractions.latencyGroupTestingWeight
                 )
             }
             if !delays.isEmpty {
-                didChange = setProxyCollection(proxyCollection.applyingDelayResults(delays)) || didChange
+                didChange =
+                setProxyCollection(proxyCollection.applyingDelayResults(delays)) || didChange
             }
             await progressActivityReporter.update(
                 kind: .latencyTest,
@@ -64,7 +66,7 @@ extension AppModel {
                 saveCachedDataIfUseful()
             }
         }
-        
+
         if outcome.errorMessage == nil {
             await progressActivityReporter.finish(
                 kind: .latencyTest,
@@ -79,20 +81,22 @@ extension AppModel {
             )
         }
     }
-    
+
     func isProxyGroupExpanded(_ groupName: String) -> Bool {
         proxyStore.isProxyGroupExpanded(groupName, profileID: selectedProfileID)
     }
-    
+
     func areAllProxyGroupsExpanded(_ groups: [ProxyItem]) -> Bool {
         proxyStore.areAllProxyGroupsExpanded(groups, profileID: selectedProfileID)
     }
-    
+
     func setProxyGroupExpanded(_ isExpanded: Bool, groupName: String) {
-        proxyStore.setProxyGroupExpanded(isExpanded, groupName: groupName, profileID: selectedProfileID)
+        proxyStore.setProxyGroupExpanded(
+            isExpanded, groupName: groupName, profileID: selectedProfileID)
     }
-    
+
     func setAllProxyGroupsExpanded(_ isExpanded: Bool, groups: [ProxyItem]) {
-        proxyStore.setAllProxyGroupsExpanded(isExpanded, groups: groups, profileID: selectedProfileID)
+        proxyStore.setAllProxyGroupsExpanded(
+            isExpanded, groups: groups, profileID: selectedProfileID)
     }
 }

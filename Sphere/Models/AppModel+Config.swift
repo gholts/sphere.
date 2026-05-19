@@ -9,7 +9,7 @@ extension AppModel {
             saveCachedDataIfUseful()
         }
     }
-    
+
     func patchConfig(_ changedValues: [String: JSONValue]) async -> Bool {
         guard let client else { return false }
         let outcome = await captureErrors {
@@ -19,7 +19,7 @@ extension AppModel {
         }
         return outcome.errorMessage == nil
     }
-    
+
     func reloadConfig() async {
         guard let client else { return }
         _ = await captureErrors {
@@ -28,7 +28,7 @@ extension AppModel {
             saveCachedDataIfUseful()
         }
     }
-    
+
     func updateMode(_ mode: ClashMode) async {
         guard let client else { return }
         _ = await captureErrors {

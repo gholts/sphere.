@@ -13,7 +13,7 @@ struct ProfileWizardView: View {
     private let editingProfile: APIProfile?
     private let profileID: UUID
     var canDismiss: Bool
-    
+
     init(editingProfile: APIProfile? = nil, canDismiss: Bool = false) {
         self.editingProfile = editingProfile
         self.profileID = editingProfile?.id ?? UUID()
@@ -23,7 +23,7 @@ struct ProfileWizardView: View {
         _baseURL = State(initialValue: editingProfile?.baseURL ?? "http://127.0.0.1:9090")
         _secret = State(initialValue: editingProfile?.secret ?? "")
     }
-    
+
     var body: some View {
         NavigationStack {
             Form {
@@ -43,11 +43,12 @@ struct ProfileWizardView: View {
                         .textContentType(nil)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                    
+
                     if !kind.isImplemented {
-                        Label("\(kind.title) saved only. Client comes later.", systemImage: "hammer")
+                        Label(
+                            "\(kind.title) saved only. Client comes later.", systemImage: "hammer")
                     }
-                    
+
                     Button {
                         Task { await test() }
                     } label: {
@@ -70,7 +71,7 @@ struct ProfileWizardView: View {
                     }
                     .disabled(!canTestConnection)
                     .allowsHitTesting(!isTesting)
-                    
+
                     Button {
                         saveProfile()
                     } label: {
@@ -81,7 +82,7 @@ struct ProfileWizardView: View {
                         )
                     }
                     .disabled(!canSaveProfile)
-                    
+
                     if let testResult {
                         Label {
                             Text(testResult.message)
@@ -106,35 +107,35 @@ struct ProfileWizardView: View {
             }
         }
     }
-    
+
     private var profile: APIProfile {
         APIProfile(id: profileID, name: name, kind: kind, baseURL: baseURL, secret: secret)
     }
-    
+
     private var canTestConnection: Bool {
         kind.isImplemented && !trimmedBaseURL.isEmpty
     }
-    
+
     private var canSaveProfile: Bool {
         !trimmedName.isEmpty && !trimmedBaseURL.isEmpty
     }
-    
+
     private var trimmedName: String {
         name.trimmingCharacters(in: .whitespacesAndNewlines)
     }
-    
+
     private var trimmedBaseURL: String {
         baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
     }
-    
+
     private var navigationTitle: String {
         editingProfile == nil ? "Add Backend" : "Edit Backend"
     }
-    
+
     private var saveButtonTitle: String {
         editingProfile == nil ? "Save Profile" : "Save Changes"
     }
-    
+
     func test() async {
         guard !isTesting else { return }
         let startedAt = Date()
@@ -143,9 +144,11 @@ struct ProfileWizardView: View {
         let testedProfile = profile
         do {
             let overview = try await app.testProfile(testedProfile)
-            let detectedKind = CoreVersionDisplay.resolvedKind(for: overview.version, fallback: testedProfile.kind)
+            let detectedKind = CoreVersionDisplay.resolvedKind(
+                for: overview.version, fallback: testedProfile.kind)
             kind = detectedKind
-            nextResult = .success(CoreVersionDisplay.successMessage(for: overview.version, kind: detectedKind))
+            nextResult = .success(
+                CoreVersionDisplay.successMessage(for: overview.version, kind: detectedKind))
         } catch {
             nextResult = .failure(error.localizedDescription)
         }
@@ -153,13 +156,13 @@ struct ProfileWizardView: View {
         testResult = nextResult
         isTesting = false
     }
-    
+
     private func waitForMinimumTestingIndicatorDuration(since startedAt: Date) async {
         let remaining = minimumTestingIndicatorDuration - Date().timeIntervalSince(startedAt)
         guard remaining > 0 else { return }
         try? await Task.sleep(for: .milliseconds(Int(remaining * 1000)))
     }
-    
+
     private func saveProfile() {
         if editingProfile == nil {
             app.addProfile(profile)
@@ -177,18 +180,18 @@ private struct ProfileTestResult: Equatable {
         case success
         case failure
     }
-    
+
     var message: String
     var status: Status
-    
+
     static func success(_ message: String) -> Self {
         Self(message: message, status: .success)
     }
-    
+
     static func failure(_ message: String) -> Self {
         Self(message: message, status: .failure)
     }
-    
+
     var systemImage: String {
         switch status {
         case .success:
@@ -197,7 +200,7 @@ private struct ProfileTestResult: Equatable {
             return "exclamationmark.triangle.fill"
         }
     }
-    
+
     var tint: Color {
         switch status {
         case .success:
@@ -210,18 +213,19 @@ private struct ProfileTestResult: Equatable {
 
 enum CoreVersionDisplay {
     private static let coreNameTokens = ["mihomo", "sing-box", "singbox", "clash"]
-    
+
     static func successMessage(for version: String, kind: BackendKind) -> String {
         "OK: \(coreAndVersion(for: version, kind: kind))"
     }
-    
+
     static func resolvedKind(for version: String, fallback: BackendKind) -> BackendKind {
-        guard let detected = BackendKind.detected(fromVersion: version), detected.isImplemented else {
+        guard let detected = BackendKind.detected(fromVersion: version), detected.isImplemented
+        else {
             return fallback
         }
         return detected
     }
-    
+
     static func coreAndVersion(for version: String, kind: BackendKind) -> String {
         let trimmed = version.trimmingCharacters(in: .whitespacesAndNewlines)
         let cleanVersion = trimmed.isEmpty ? "Unknown" : trimmed

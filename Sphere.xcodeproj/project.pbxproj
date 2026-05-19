@@ -299,7 +299,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/zsh;
-			shellScript = "if [ -f /opt/homebrew/bin/brew ]; then\n    eval \"$(/opt/homebrew/bin/brew shellenv)\"\nfi\n\nif command -v swiftlint >/dev/null; then\n    swiftlint --no-cache --config \"${SRCROOT}/.swiftlint.yml\"\nelse\n    echo \"warning: SwiftLint not installed.\"\nfi\n";
+			shellScript = "if [ -f /opt/homebrew/bin/brew ]; then\n    eval \"$(/opt/homebrew/bin/brew shellenv)\"\nfi\n\nif command -v swiftlint >/dev/null; then\n    swiftlint --fix --no-cache --config \"${SRCROOT}/.swiftlint.yml\"\nelse\n    echo \"warning: SwiftLint is not installed.\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

@@ -5,7 +5,8 @@ enum PreviewFixtures {
     static func app() -> AppModel {
         let defaults = UserDefaults(suiteName: "sphere.preview.\(UUID().uuidString)") ?? .standard
         let app = AppModel(defaults: defaults)
-        app.addProfile(APIProfile(name: "Local Mihomo", baseURL: "http://127.0.0.1:9090", secret: ""))
+        app.addProfile(
+            APIProfile(name: "Local Mihomo", baseURL: "http://127.0.0.1:9090", secret: ""))
         app.overview = BackendOverview(
             version: "Mihomo 1.19",
             uptime: nil,
@@ -18,14 +19,17 @@ enum PreviewFixtures {
             proxies: [
                 ProxyItem(name: "DIRECT", type: "Direct"),
                 ProxyItem(name: "Japan", type: "Shadowsocks", udp: true, delay: 64),
-                ProxyItem(name: "GLOBAL", type: "Selector", now: "Japan", all: ["DIRECT", "Japan"]),
+                ProxyItem(
+                    name: "GLOBAL", type: "Selector", now: "Japan", all: ["DIRECT", "Japan"]),
             ],
             groups: [
                 ProxyItem(name: "GLOBAL", type: "Selector", now: "Japan", all: ["DIRECT", "Japan"])
             ]
         )
         app.proxyProviders = [
-            ProxyProvider(name: "main", vehicleType: "HTTP", expireAt: Date().addingTimeInterval(86_400 * 30), usedBytes: 10 * 1024 * 1024 * 1024, totalBytes: 100 * 1024 * 1024 * 1024)
+            ProxyProvider(
+                name: "main", vehicleType: "HTTP", expireAt: Date().addingTimeInterval(86_400 * 30),
+                usedBytes: 10 * 1024 * 1024 * 1024, totalBytes: 100 * 1024 * 1024 * 1024),
         ]
         app.rules = [
             RuleItem(type: "DOMAIN-SUFFIX", payload: "example.com", proxy: "GLOBAL")

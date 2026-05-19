@@ -7,7 +7,7 @@ nonisolated enum JSONValue: Codable, Hashable, Sendable {
     case number(Double)
     case bool(Bool)
     case null
-    
+
     var displayText: String {
         switch self {
         case .object(let values):
@@ -27,7 +27,7 @@ nonisolated enum JSONValue: Codable, Hashable, Sendable {
             return "null"
         }
     }
-    
+
     var isScalar: Bool {
         switch self {
         case .string, .number, .bool, .null:
@@ -36,7 +36,7 @@ nonisolated enum JSONValue: Codable, Hashable, Sendable {
             return false
         }
     }
-    
+
     init(from decoder: Decoder) throws {
         if let object = try? decoder.container(keyedBy: DynamicCodingKey.self) {
             var values: [String: Self] = [:]
@@ -47,7 +47,7 @@ nonisolated enum JSONValue: Codable, Hashable, Sendable {
             self = .object(values)
             return
         }
-        
+
         if var array = try? decoder.unkeyedContainer() {
             var values: [Self] = []
             values.reserveCapacity(array.count ?? 0)
@@ -57,7 +57,7 @@ nonisolated enum JSONValue: Codable, Hashable, Sendable {
             self = .array(values)
             return
         }
-        
+
         let container = try decoder.singleValueContainer()
         if container.decodeNil() {
             self = .null
@@ -68,10 +68,11 @@ nonisolated enum JSONValue: Codable, Hashable, Sendable {
         } else if let value = try? container.decode(String.self) {
             self = .string(value)
         } else {
-            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unsupported JSON value")
+            throw DecodingError.dataCorruptedError(
+                in: container, debugDescription: "Unsupported JSON value")
         }
     }
-    
+
     func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         switch self {

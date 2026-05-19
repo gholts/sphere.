@@ -9,7 +9,7 @@ extension AppModel {
             return .failure(error)
         }
     }
-    
+
     func apply<T>(_ result: Result<T, Error>, onSuccess: (T) -> Void) -> RefreshOutcome {
         switch result {
         case .success(let value):
@@ -21,7 +21,7 @@ extension AppModel {
             return RefreshOutcome(error: error)
         }
     }
-    
+
     func captureErrors(_ operation: () async throws -> Void) async -> RefreshOutcome {
         do {
             try await operation()
@@ -36,7 +36,7 @@ extension AppModel {
             return outcome
         }
     }
-    
+
     func prepareRefresh(source: RefreshSource) {
         if source.isUserInitiated {
             manualRefreshDepth += 1
@@ -44,7 +44,7 @@ extension AppModel {
             isAutoRefreshSuspended = false
         }
     }
-    
+
     func finishRefresh(_ outcome: RefreshOutcome, source: RefreshSource) async {
         defer { finishManualRefresh(source: source) }
         if outcome.backendConnected {
@@ -61,11 +61,11 @@ extension AppModel {
             await waitForBackendErrorDebounceIfNeeded()
         }
     }
-    
+
     func suspendBackgroundRefresh() {
         isAutoRefreshSuspended = true
     }
-    
+
     func finishManualRefresh(source: RefreshSource) {
         guard source.isUserInitiated else { return }
         manualRefreshDepth = max(0, manualRefreshDepth - 1)
@@ -73,14 +73,15 @@ extension AppModel {
             isManualRefreshActive = false
         }
     }
-    
+
     func waitForBackendErrorDebounceIfNeeded() async {
         await runBackendErrorDebounce(revision: backendErrorDebounceRevision)
     }
-    
+
     func markBackendConnected() {
         backendSuccessGeneration &+= 1
-        guard isBackendErrorDebouncing || errorMessage != nil || pendingBackendErrorMessage != nil else {
+        guard isBackendErrorDebouncing || errorMessage != nil || pendingBackendErrorMessage != nil
+        else {
             return
         }
         pendingBackendErrorMessage = nil
@@ -88,7 +89,7 @@ extension AppModel {
         errorMessage = nil
         backendErrorDebounceRevision &+= 1
     }
-    
+
     func beginBackendErrorDebounce(_ message: String) {
         pendingBackendErrorMessage = message
         guard !isBackendErrorDebouncing else { return }
@@ -97,11 +98,11 @@ extension AppModel {
         backendErrorStartedAtGeneration = backendSuccessGeneration
         backendErrorDebounceRevision &+= 1
     }
-    
+
     func runBackendErrorDebounce() async {
         await runBackendErrorDebounce(revision: backendErrorDebounceRevision)
     }
-    
+
     private func runBackendErrorDebounce(revision: Int) async {
         guard isBackendErrorDebouncing, revision == backendErrorDebounceRevision else { return }
         do {
@@ -112,7 +113,7 @@ extension AppModel {
         guard revision == backendErrorDebounceRevision else { return }
         confirmBackendError(startedAtGeneration: backendErrorStartedAtGeneration)
     }
-    
+
     func confirmBackendError(startedAtGeneration generation: Int) {
         guard backendSuccessGeneration == generation else {
             pendingBackendErrorMessage = nil

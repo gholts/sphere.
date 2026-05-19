@@ -48,7 +48,10 @@ extension AppModel {
                 status: .failed,
                 detail: "Core update failed"
             )
-            return .failure(channel: channel, message: error.localizedDescription)
+            return .failure(
+                channel: channel,
+                message: error.localizedDescription
+            )
         }
     }
 }

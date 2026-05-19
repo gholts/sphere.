@@ -4,20 +4,20 @@ struct ConnectionsView: View {
     @Environment(AppModel.self) private var app
     @Environment(LiveState.self) private var live
     @State private var showSheet = false
-    
+
     var body: some View {
         NavigationStack {
             List {
                 Section("Live") {
                     AdaptiveStatRows(metrics: liveMetrics)
                 }
-                
+
                 Button {
                     showSheet = true
                 } label: {
                     Label("Show Connections", systemImage: "list.bullet")
                 }
-                
+
                 Button(role: .destructive) {
                     Task { await app.closeAllConnections() }
                 } label: {
@@ -41,12 +41,13 @@ struct ConnectionsView: View {
             }
         }
     }
-    
+
     private var liveMetrics: [StatMetric] {
         [
             StatMetric(title: "Active", value: "\(live.connections.connections.count)"),
             StatMetric(title: "Uploaded", value: ByteFormat.bytes(live.connections.uploadTotal)),
-            StatMetric(title: "Downloaded", value: ByteFormat.bytes(live.connections.downloadTotal)),
+            StatMetric(
+                title: "Downloaded", value: ByteFormat.bytes(live.connections.downloadTotal)),
         ]
     }
 }
@@ -56,7 +57,7 @@ struct ConnectionsSheetView: View {
     @Environment(AppModel.self) private var app
     @Environment(LiveState.self) private var live
     @State private var filter = ConnectionFilter()
-    
+
     var body: some View {
         NavigationStack {
             List {
@@ -69,7 +70,7 @@ struct ConnectionsSheetView: View {
                         Text("Min download: \(ByteFormat.bytes(filter.minimumDownloadBytes))")
                     }
                 }
-                
+
                 Section("Connections") {
                     if filteredConnections.isEmpty {
                         Text("No matching connections")
@@ -99,7 +100,7 @@ struct ConnectionsSheetView: View {
             }
         }
     }
-    
+
     private var filteredConnections: [ConnectionInfo] {
         live.connections.connections.filter(filter.matches)
     }
@@ -108,7 +109,7 @@ struct ConnectionsSheetView: View {
 struct ConnectionRow: View {
     var connection: ConnectionInfo
     var close: () -> Void
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
@@ -121,16 +122,19 @@ struct ConnectionRow: View {
                 .buttonStyle(.borderless)
                 .accessibilityLabel("Close connection")
             }
-            
+
             HStack {
                 Text(connection.metadata.sourceIP ?? "source n/a")
                 Spacer()
-                Text(verbatim: connection.outbound.isEmpty ? "outbound n/a" : connection.outbound.backendNameForDisplay)
-                    .lineLimit(1)
+                Text(
+                    verbatim: connection.outbound.isEmpty
+                        ? "outbound n/a" : connection.outbound.backendNameForDisplay
+                )
+                .lineLimit(1)
             }
             .font(.caption)
             .foregroundStyle(.secondary)
-            
+
             HStack {
                 Label(ByteFormat.bytes(connection.upload), systemImage: "arrow.up")
                 Label(ByteFormat.bytes(connection.download), systemImage: "arrow.down")

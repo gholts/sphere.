@@ -3,7 +3,8 @@ import Foundation
 
 @MainActor
 protocol ProgressActivityReporting {
-    func start(kind: SphereProgressActivityKind, title: String, detail: String, fraction: Double) async
+    func start(kind: SphereProgressActivityKind, title: String, detail: String, fraction: Double)
+        async
     func update(title: String, detail: String, fraction: Double) async
     func finish(status: SphereProgressActivityStatus, title: String, detail: String) async
 }
@@ -12,12 +13,14 @@ extension ProgressActivityReporting {
     func start(kind: SphereProgressActivityKind, detail: String, fraction: Double) async {
         await start(kind: kind, title: kind.title, detail: detail, fraction: fraction)
     }
-    
+
     func update(kind: SphereProgressActivityKind, detail: String, fraction: Double) async {
         await update(title: kind.title, detail: detail, fraction: fraction)
     }
-    
-    func finish(kind: SphereProgressActivityKind, status: SphereProgressActivityStatus, detail: String) async {
+
+    func finish(
+        kind: SphereProgressActivityKind, status: SphereProgressActivityStatus, detail: String
+    ) async {
         await finish(status: status, title: kind.title, detail: detail)
     }
 }
@@ -31,14 +34,16 @@ enum ProgressActivityFractions {
 }
 
 struct NoopProgressActivityReporter: ProgressActivityReporting {
-    func start(kind _: SphereProgressActivityKind, title _: String, detail _: String, fraction _: Double) {
+    func start(
+        kind _: SphereProgressActivityKind, title _: String, detail _: String, fraction _: Double
+    ) {
         // Intentionally empty for tests and unsupported activity environments.
     }
-    
+
     func update(title _: String, detail _: String, fraction _: Double) {
         // Intentionally empty for tests and unsupported activity environments.
     }
-    
+
     func finish(status _: SphereProgressActivityStatus, title _: String, detail _: String) {
         // Intentionally empty for tests and unsupported activity environments.
     }
@@ -57,19 +62,20 @@ enum ProgressActivityReporterFactory {
 @MainActor
 final class LazyProgressActivityReporter: ProgressActivityReporting {
     private var reporter: (any ProgressActivityReporting)?
-    
-    func start(kind: SphereProgressActivityKind, title: String, detail: String, fraction: Double) async {
+
+    func start(kind: SphereProgressActivityKind, title: String, detail: String, fraction: Double)
+        async {
         await currentReporter().start(kind: kind, title: title, detail: detail, fraction: fraction)
     }
-    
+
     func update(title: String, detail: String, fraction: Double) async {
         await currentReporter().update(title: title, detail: detail, fraction: fraction)
     }
-    
+
     func finish(status: SphereProgressActivityStatus, title: String, detail: String) async {
         await currentReporter().finish(status: status, title: title, detail: detail)
     }
-    
+
     private func currentReporter() -> any ProgressActivityReporting {
         if let reporter {
             return reporter
@@ -83,11 +89,12 @@ final class LazyProgressActivityReporter: ProgressActivityReporting {
 @MainActor
 final class LiveActivityProgressReporter: ProgressActivityReporting {
     private var activity: Activity<SphereProgressActivityAttributes>?
-    
-    func start(kind: SphereProgressActivityKind, title: String, detail: String, fraction: Double) async {
+
+    func start(kind: SphereProgressActivityKind, title: String, detail: String, fraction: Double)
+        async {
         await endCurrent()
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
-        
+
         let attributes = SphereProgressActivityAttributes(
             operationID: UUID().uuidString,
             kind: kind
@@ -98,14 +105,14 @@ final class LiveActivityProgressReporter: ProgressActivityReporting {
             fraction: fraction,
             status: .running
         )
-        
+
         do {
             activity = try Activity.request(attributes: attributes, content: content, pushType: nil)
         } catch {
             activity = nil
         }
     }
-    
+
     func update(title: String, detail: String, fraction: Double) async {
         guard let activity else { return }
         let content = activityContent(
@@ -116,7 +123,7 @@ final class LiveActivityProgressReporter: ProgressActivityReporting {
         )
         await activity.update(content)
     }
-    
+
     func finish(status: SphereProgressActivityStatus, title: String, detail: String) async {
         guard let activity else { return }
         let content = activityContent(
@@ -125,16 +132,19 @@ final class LiveActivityProgressReporter: ProgressActivityReporting {
             fraction: 1,
             status: status
         )
-        await activity.end(content, dismissalPolicy: .after(Date().addingTimeInterval(ProgressActivityTiming.finishedDismissalDelay)))
+        await activity.end(
+            content,
+            dismissalPolicy: .after(
+                Date().addingTimeInterval(ProgressActivityTiming.finishedDismissalDelay)))
         self.activity = nil
     }
-    
+
     private func endCurrent() async {
         guard let activity else { return }
         await activity.end(nil, dismissalPolicy: .immediate)
         self.activity = nil
     }
-    
+
     private func activityContent(
         title: String,
         detail: String,

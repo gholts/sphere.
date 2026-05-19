@@ -3,7 +3,7 @@ import SwiftUI
 struct ProxyIconView: View {
     var icon: String?
     var size: CGFloat = 16
-    
+
     var body: some View {
         if let icon, !icon.isEmpty {
             ProxyIconBody(icon: icon)
@@ -16,7 +16,7 @@ struct ProxyIconView: View {
 
 private struct ProxyIconBody: View {
     var icon: String
-    
+
     var body: some View {
         if icon.hasPrefix("data:image/svg+xml") {
             Image(systemName: "network")
@@ -34,7 +34,7 @@ private struct ProxyIconBody: View {
 private struct CachedProxyIconImage: View {
     var icon: String
     @State private var image: CGImage?
-    
+
     var body: some View {
         if let image {
             Image(decorative: image, scale: 1)

@@ -13,12 +13,12 @@ struct SphereProgressLiveActivity: Widget {
                         .font(.caption)
                         .lineLimit(1)
                 }
-                
+
                 DynamicIslandExpandedRegion(.trailing) {
                     Text(context.state.percentText)
                         .font(.caption.monospacedDigit())
                 }
-                
+
                 DynamicIslandExpandedRegion(.bottom) {
                     VStack(alignment: .leading, spacing: 6) {
                         ProgressView(value: context.state.clampedFraction)
@@ -36,8 +36,11 @@ struct SphereProgressLiveActivity: Widget {
                 Text(context.state.percentText)
                     .font(.caption2.monospacedDigit())
             } minimal: {
-                Image(systemName: minimalImage(for: context.state.status, kind: context.attributes.kind))
-                    .foregroundStyle(activityTint(for: context.state.status))
+                Image(
+                    systemName: minimalImage(
+                        for: context.state.status, kind: context.attributes.kind)
+                )
+                .foregroundStyle(activityTint(for: context.state.status))
             }
         }
     }
@@ -45,7 +48,7 @@ struct SphereProgressLiveActivity: Widget {
 
 private struct SphereProgressLockScreenView: View {
     let context: ActivityViewContext<SphereProgressActivityAttributes>
-    
+
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: context.attributes.kind.systemImage)
@@ -53,7 +56,7 @@ private struct SphereProgressLockScreenView: View {
                 .foregroundStyle(activityTint(for: context.state.status))
                 .frame(width: 28)
                 .accessibilityHidden(true)
-            
+
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Text(context.state.title)

@@ -18,7 +18,7 @@ nonisolated struct ConnectionInfo: Identifiable, Codable, Equatable, Sendable {
     var chains: [String]
     var rule: String?
     var rulePayload: String?
-    
+
     var outbound: String {
         chains.first ?? rule ?? ""
     }
@@ -29,8 +29,13 @@ nonisolated struct ConnectionsSnapshot: Codable, Equatable, Sendable {
     var downloadTotal: Int64?
     var connections: [ConnectionInfo]
     var memory: Int?
-    
-    init(uploadTotal: Int64?, downloadTotal: Int64?, connections: [ConnectionInfo], memory: Int? = nil) {
+
+    init(
+        uploadTotal: Int64?,
+        downloadTotal: Int64?,
+        connections: [ConnectionInfo],
+        memory: Int? = nil
+    ) {
         self.uploadTotal = uploadTotal
         self.downloadTotal = downloadTotal
         self.connections = connections
@@ -42,10 +47,13 @@ nonisolated struct ConnectionFilter: Equatable, Sendable {
     var sourceIP = ""
     var outbound = ""
     var minimumDownloadBytes: Int64 = 0
-    
+
     func matches(_ connection: ConnectionInfo) -> Bool {
-        let sourceMatches = sourceIP.isEmpty || (connection.metadata.sourceIP ?? "").localizedStandardContains(sourceIP)
-        let outboundMatches = outbound.isEmpty || connection.outbound.localizedStandardContains(outbound)
+        let sourceMatches =
+            sourceIP.isEmpty
+            || (connection.metadata.sourceIP ?? "").localizedStandardContains(sourceIP)
+        let outboundMatches =
+            outbound.isEmpty || connection.outbound.localizedStandardContains(outbound)
         return sourceMatches && outboundMatches && connection.download >= minimumDownloadBytes
     }
 }

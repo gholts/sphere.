@@ -40,18 +40,22 @@ extension AppModel {
         prepareRefresh(source: source)
         isLoading = true
         defer { isLoading = false }
-        
+
         var outcome = RefreshOutcome()
         await withTaskGroup(of: RefreshAllValue.self) { taskGroup in
             taskGroup.addTask { .version(await backendResult { try await client.version() }) }
             taskGroup.addTask { .overview(await backendResult { try await client.overview() }) }
             taskGroup.addTask { .proxies(await backendResult { try await client.proxies() }) }
-            taskGroup.addTask { .proxyProviders(await backendResult { try await client.proxyProviders() }) }
+            taskGroup.addTask {
+                .proxyProviders(await backendResult { try await client.proxyProviders() })
+            }
             taskGroup.addTask { .rules(await backendResult { try await client.rules() }) }
-            taskGroup.addTask { .ruleProviders(await backendResult { try await client.ruleProviders() }) }
+            taskGroup.addTask {
+                .ruleProviders(await backendResult { try await client.ruleProviders() })
+            }
             taskGroup.addTask { .configs(await backendResult { try await client.configs() }) }
             taskGroup.addTask { .mode(await backendResult { try await client.clashMode() }) }
-            
+
             for await value in taskGroup {
                 switch value {
                 case .version(let result):
@@ -76,7 +80,7 @@ extension AppModel {
         saveCachedDataIfUseful()
         await finishRefresh(outcome, source: source)
     }
-    
+
     func runAutoRefreshLoop() async {
         guard !isAutoRefreshSuspended else { return }
         while !Task.isCancelled {
@@ -85,7 +89,7 @@ extension AppModel {
             await refreshSelectedTab(source: .automatic)
         }
     }
-    
+
     func refreshSelectedTab(source: RefreshSource = .manual) async {
         await loadCachedDataIfNeeded()
         if source == .automatic, isAutoRefreshSuspended {
@@ -93,7 +97,7 @@ extension AppModel {
         }
         await refresh(tab: selectedTab, source: source)
     }
-    
+
     func refreshFromToolbar(_ tab: AppTab) async {
         await loadCachedDataIfNeeded()
         guard !toolbarRefreshingTabs.contains(tab) else { return }
@@ -101,11 +105,11 @@ extension AppModel {
         defer { toolbarRefreshingTabs.remove(tab) }
         await refresh(tab: tab, source: .manual)
     }
-    
+
     func isToolbarRefreshing(_ tab: AppTab) -> Bool {
         toolbarRefreshingTabs.contains(tab)
     }
-    
+
     private func refresh(tab: AppTab, source: RefreshSource) async {
         switch tab {
         case .proxies:
@@ -118,19 +122,21 @@ extension AppModel {
             await refreshAll(source: source)
         }
     }
-    
+
     func refreshProxies(source: RefreshSource = .manual) async {
         await loadCachedDataIfNeeded()
         guard let client else { return }
         prepareRefresh(source: source)
-        
+
         var outcome = RefreshOutcome()
         var didChange = false
-        
+
         await withTaskGroup(of: RefreshProxiesValue.self) { taskGroup in
             taskGroup.addTask { .proxies(await backendResult { try await client.proxies() }) }
-            taskGroup.addTask { .proxyProviders(await backendResult { try await client.proxyProviders() }) }
-            
+            taskGroup.addTask {
+                .proxyProviders(await backendResult { try await client.proxyProviders() })
+            }
+
             for await value in taskGroup {
                 switch value {
                 case .proxies(let result):
@@ -152,24 +158,26 @@ extension AppModel {
                 }
             }
         }
-        
+
         if didChange {
             saveCachedDataIfUseful()
         }
         await finishRefresh(outcome, source: source)
     }
-    
+
     func refreshRules(source: RefreshSource = .manual) async {
         await loadCachedDataIfNeeded()
         guard let client else { return }
         prepareRefresh(source: source)
-        
+
         var outcome = RefreshOutcome()
         await withTaskGroup(of: RefreshRulesValue.self) { taskGroup in
             taskGroup.addTask { .rules(await backendResult { try await client.rules() }) }
-            taskGroup.addTask { .ruleProviders(await backendResult { try await client.ruleProviders() }) }
+            taskGroup.addTask {
+                .ruleProviders(await backendResult { try await client.ruleProviders() })
+            }
             taskGroup.addTask { .configs(await backendResult { try await client.configs() }) }
-            
+
             for await value in taskGroup {
                 switch value {
                 case .rules(let result):

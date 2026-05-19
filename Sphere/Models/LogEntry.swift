@@ -5,7 +5,7 @@ nonisolated struct LogEntry: Identifiable, Decodable, Equatable, Sendable {
     var type: String
     var payload: String
     var date = Date()
-    
+
     enum CodingKeys: String, CodingKey {
         case type
         case payload

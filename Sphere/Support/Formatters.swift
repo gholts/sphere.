@@ -5,17 +5,17 @@ enum ByteFormat {
         guard let value else { return "n/a" }
         return value.formatted(.byteCount(style: .binary))
     }
-    
+
     static func memoryBytes(_ value: Int?) -> String {
         guard let value else { return "n/a" }
         return iecBytes(Int64(value))
     }
-    
+
     static func speedBytes(_ value: Int?) -> String {
         guard let value else { return "n/a" }
         return "\(Int64(value).formatted(.byteCount(style: .file)))/s"
     }
-    
+
     private static func iecBytes(_ value: Int64) -> String {
         let units = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"]
         var amount = Double(value)
@@ -38,7 +38,7 @@ enum DateFormat {
         guard let date else { return "n/a" }
         return date.formatted(date: .abbreviated, time: .shortened)
     }
-    
+
     static func expire(_ date: Date?) -> String {
         guard let date else { return "No expiry" }
         return date.formatted(date: .abbreviated, time: .omitted)

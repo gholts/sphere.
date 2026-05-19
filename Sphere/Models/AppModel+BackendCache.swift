@@ -5,26 +5,26 @@ extension AppModel {
     func cacheKey(profileID: UUID?) -> String {
         "\(AppStorageKeys.cachedDataPrefix).\(profileID?.uuidString ?? "none")"
     }
-    
+
     func cacheKey() -> String {
         cacheKey(profileID: selectedProfileID)
     }
-    
+
     func loadCachedDataIfNeeded() async {
         let profileID = selectedProfileID
         guard loadedCacheProfileID != profileID else { return }
         loadedCacheProfileID = profileID
         await loadCachedData(profileID: profileID)
     }
-    
+
     private func loadCachedData(profileID: UUID?) async {
         guard let data = defaults.data(forKey: cacheKey(profileID: profileID)),
-              let snapshot = await BackendCacheCodec.decode(data)
+            let snapshot = await BackendCacheCodec.decode(data)
         else { return }
         guard selectedProfileID == profileID else { return }
         applyCachedData(snapshot)
     }
-    
+
     private func applyCachedData(_ snapshot: BackendDataCache) {
         overview = snapshot.overview
         setProxyCollection(snapshot.proxyCollection)
@@ -34,7 +34,7 @@ extension AppModel {
         configs = snapshot.configs
         clashMode = snapshot.clashMode
     }
-    
+
     func saveCachedDataIfUseful() {
         guard hasCacheableData else { return }
         let snapshot = BackendDataCache(
@@ -51,7 +51,7 @@ extension AppModel {
             lastCacheSave = Date()
         }
     }
-    
+
     func scheduleCacheSave() {
         guard hasCacheableData else { return }
         let delay = cacheSaveInterval - Date().timeIntervalSince(lastCacheSave)
@@ -62,7 +62,7 @@ extension AppModel {
         pendingCacheSave = true
         cacheSaveRevision &+= 1
     }
-    
+
     func runPendingCacheSave() async {
         guard pendingCacheSave else { return }
         let delay = max(0, cacheSaveInterval - Date().timeIntervalSince(lastCacheSave))
@@ -77,22 +77,18 @@ extension AppModel {
         pendingCacheSave = false
         saveCachedDataIfUseful()
     }
-    
+
     func flushPendingCacheSave() {
         guard pendingCacheSave else { return }
         pendingCacheSave = false
         cacheSaveRevision &+= 1
         saveCachedDataIfUseful()
     }
-    
+
     var hasCacheableData: Bool {
-        overview != .empty ||
-        !proxyCollection.proxies.isEmpty ||
-        !proxyCollection.groups.isEmpty ||
-        !proxyProviders.isEmpty ||
-        !rules.isEmpty ||
-        !ruleProviders.isEmpty ||
-        !configs.isEmpty
+        overview != .empty || !proxyCollection.proxies.isEmpty || !proxyCollection.groups.isEmpty
+            || !proxyProviders.isEmpty || !rules.isEmpty || !ruleProviders.isEmpty
+            || !configs.isEmpty
     }
 }
 

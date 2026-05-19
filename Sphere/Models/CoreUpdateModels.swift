@@ -3,9 +3,9 @@ import Foundation
 nonisolated enum CoreUpdateChannel: String, CaseIterable, Identifiable, Sendable {
     case release
     case alpha
-    
+
     var id: String { rawValue }
-    
+
     var title: String {
         switch self {
         case .release:
@@ -22,11 +22,11 @@ nonisolated struct CoreUpdateReport: Equatable, Sendable {
         case failure
         case skipped
     }
-    
+
     var channel: CoreUpdateChannel
     var status: Status
     var message: String
-    
+
     var title: String {
         switch status {
         case .success:
@@ -37,7 +37,7 @@ nonisolated struct CoreUpdateReport: Equatable, Sendable {
             return "Update Unavailable"
         }
     }
-    
+
     var systemImage: String {
         switch status {
         case .success:
@@ -48,16 +48,21 @@ nonisolated struct CoreUpdateReport: Equatable, Sendable {
             return "exclamationmark.triangle.fill"
         }
     }
-    
+
     static func success(channel: CoreUpdateChannel) -> Self {
         Self(channel: channel, status: .success, message: "\(channel.title) core update finished.")
     }
-    
+
     static func failure(channel: CoreUpdateChannel, message: String) -> Self {
-        Self(channel: channel, status: .failure, message: "\(channel.title) core update failed. \(message)")
+        Self(
+            channel: channel, status: .failure,
+            message: "\(channel.title) core update failed. \(message)"
+        )
     }
-    
+
     static func skipped(channel: CoreUpdateChannel) -> Self {
-        Self(channel: channel, status: .skipped, message: "Core update unavailable for current backend.")
+        Self(
+            channel: channel, status: .skipped,
+            message: "Core update unavailable for current backend.")
     }
 }

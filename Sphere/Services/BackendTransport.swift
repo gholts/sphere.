@@ -3,11 +3,11 @@ import Foundation
 nonisolated struct BackendTransport: Sendable {
     static let defaultRequestTimeout: TimeInterval = 8
     static let defaultResourceTimeout: TimeInterval = 20
-    
+
     var profile: APIProfile
     var session: URLSession
     var requestTimeout: TimeInterval
-    
+
     init(
         profile: APIProfile,
         session: URLSession = Self.makeSession(),
@@ -17,7 +17,7 @@ nonisolated struct BackendTransport: Sendable {
         self.session = session
         self.requestTimeout = requestTimeout
     }
-    
+
     static func makeSession() -> URLSession {
         let configuration = URLSessionConfiguration.default
         configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
@@ -27,7 +27,7 @@ nonisolated struct BackendTransport: Sendable {
         configuration.waitsForConnectivity = false
         return URLSession(configuration: configuration)
     }
-    
+
     func request<T: Decodable>(
         path: String,
         query: [URLQueryItem] = [],
@@ -42,7 +42,7 @@ nonisolated struct BackendTransport: Sendable {
         let data = try await data(for: request)
         return try JSONDecoder().decode(T.self, from: data)
     }
-    
+
     func requestNoBody(
         path: String,
         query: [URLQueryItem] = [],
@@ -59,7 +59,7 @@ nonisolated struct BackendTransport: Sendable {
         )
         _ = try await data(for: request)
     }
-    
+
     func webSocketStream<T: Decodable & Sendable>(
         path: String,
         query: [URLQueryItem],
@@ -103,24 +103,25 @@ nonisolated struct BackendTransport: Sendable {
             }
         }
     }
-    
+
     func escaped(_ value: String) -> String {
         var allowed = CharacterSet.urlPathAllowed
         allowed.remove(charactersIn: ":#[]@!$&'()*+,;=/%?")
         return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
     }
-    
+
     private func data(for request: URLRequest) async throws -> Data {
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else {
             throw BackendError.invalidResponse
         }
         guard (200..<300).contains(http.statusCode) else {
-            throw BackendError.httpStatus(http.statusCode, String(data: data, encoding: .utf8) ?? "")
+            throw BackendError.httpStatus(
+                http.statusCode, String(data: data, encoding: .utf8) ?? "")
         }
         return data.isEmpty ? Data("{}".utf8) : data
     }
-    
+
     private func webSocketRequest(
         path: String,
         query: [URLQueryItem],
@@ -136,7 +137,9 @@ nonisolated struct BackendTransport: Sendable {
             query: webSocketQuery,
             timeoutInterval: requestTimeout
         )
-        guard let url = request.url, var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+        guard let url = request.url,
+            var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        else {
             throw BackendError.invalidBaseURL
         }
         components.scheme = components.scheme == "https" ? "wss" : "ws"
