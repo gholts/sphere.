@@ -8,6 +8,12 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: ios-build-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -67,3 +73,166 @@ jobs:
         with:
           files: ${{ env.IPA_PATH }}
           generate_release_notes: true
+
+  build-pages:
+    name: Build AltStore source JSON
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Generate AltStore source from GitHub Releases
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          APP_NAME="Sphere"
+          APP_BUNDLE_ID="dev.gholts.Sphere"
+          DEVELOPER_NAME="Hugo Lee"
+
+          SOURCE_NAME="Sphere Source"
+          SOURCE_IDENTIFIER="dev.gholts.sphere-repo"
+
+          TINT_COLOR="16A34A"
+          ASSET_REGEX='^sphere-.*\.ipa$'
+          MAX_VERSIONS=30
+
+          REPO_URL="https://github.com/${GITHUB_REPOSITORY}/"
+          PAGES_URL="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/"
+          ICON_URL="${PAGES_URL}/icon.png"
+
+          mkdir -p site/altstore tmp/json
+
+          gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" > tmp/json/releases.json
+
+          jq -c \
+            --arg assetRegex "$ASSET_REGEX" \
+            --argjson maxVersions "$MAX_VERSIONS" \
+            '
+            sort_by(.published_at // .created_at)
+            | reverse
+            | map(select(.draft | not))
+            | map(select(.prerelease | not))
+            | map(
+                . as $release
+                | ($release.assets | map(select(.name | test($assetRegex))) | first) as $asset
+                | select($asset != null)
+                | {
+                    version: ($release.tag_name | sub("^v"; "")),
+                    date: ($release.published_at // $release.created_at),
+                    localizedDescription: (
+                      if (($release.body // "") | length) > 0
+                      then $release.body
+                      elif (($release.name // "") | length) > 0
+                      then $release.name
+                      else "Release \($release.tag_name)"
+                      end
+                    ),
+                    downloadURL: $asset.browser_download_url,
+                    size: $asset.size
+                  }
+              )
+            | .[:$maxVersions]
+            ' tmp/json/releases.json > tmp/json/versions.json
+
+          if [ "$(jq 'length' tmp/json/versions.json)" -eq 0 ]; then
+            echo "No matching IPA release assets found."
+            exit 1
+          fi
+
+          jq -c \
+            --arg assetRegex "$ASSET_REGEX" \
+            '
+            sort_by(.published_at // .created_at)
+            | reverse
+            | map(select(.draft | not))
+            | map(select(.prerelease | not))
+            | map(
+                . as $release
+                | ($release.assets | map(select(.name | test($assetRegex))) | first) as $asset
+                | select($asset != null)
+                | {
+                    title: "Sphere \($release.tag_name)",
+                    identifier: "sphere-release-\($release.tag_name)",
+                    caption: (
+                      if (($release.body // "") | length) > 0
+                      then (($release.body | split("\n")) | map(select(length > 0)) | first)
+                      else "Sphere \($release.tag_name) is now available."
+                      end
+                    ),
+                    tintColor: "16A34A",
+                    date: ($release.published_at // $release.created_at),
+                    url: $release.html_url,
+                    appID: "dev.gholts.Sphere",
+                    notify: false
+                  }
+              )
+            '
+
+            jq -n \
+            --slurpfile versions tmp/json/versions.json \
+            --arg sourceName "$SOURCE_NAME" \
+            --arg sourceIdentifier "$SOURCE_IDENTIFIER" \
+            --arg iconURL "$ICON_URL" \
+            --arg website "$REPO_URL" \
+            --arg appName "$APP_NAME" \
+            --arg bundleIdentifier "$APP_BUNDLE_ID" \
+            --arg developerName "$DEVELOPER_NAME" \
+            --arg tintColor "$TINT_COLOR" \
+            '
+            ($versions[0][0]) as $latest
+            | {
+              name: $sourceName,
+              identifier: $sourceIdentifier,
+              iconURL: $iconURL,
+              website: $website,
+              apps: [
+                {
+                  name: $appName,
+                  bundleIdentifier: $bundleIdentifier,
+                  developerName: $developerName,
+                  iconURL: $iconURL,
+                  localizedDescription: "Sphere is an iOS app for managing LAN controller profiles.",
+                  subtitle: "Proxy controller client",
+                  tintColor: $tintColor,
+                  versions: $versions[0],
+                  appPermissions: {},
+
+                  version: $latest.version,
+                  versionDate: $latest.date,
+                  size: $latest.size,
+                  downloadURL: $latest.downloadURL
+                }
+              ],
+            }
+            ' > site/altstore/release.json
+
+          jq . site/altstore/release.json
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy-pages:
+    name: Deploy AltStore source
+    needs: build-pages
+    if: needs.build-pages.result == 'success'
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
