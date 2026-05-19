@@ -2,7 +2,7 @@ import Foundation
 
 @MainActor
 extension AppModel {
-    func result<T>(_ operation: () async throws -> T) async -> Result<T, Error> {
+    func result<T: Sendable>(_ operation: () async throws -> T) async -> Result<T, Error> {
         do {
             return .success(try await operation())
         } catch {

@@ -83,7 +83,7 @@ nonisolated enum ProfileCodec {
         (try? JSONDecoder().decode([APIProfile].self, from: data)) ?? []
     }
     
-    @concurrent
+    @Sendable
     static func decodeAsync(_ data: Data) async -> [APIProfile] {
         decode(data)
     }

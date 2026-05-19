@@ -148,7 +148,7 @@ struct RefreshToolbarButton: View, Equatable {
     var accessibilityLabel: String
     var action: () -> Void
     
-    static func == (lhs: Self, rhs: Self) -> Bool {
+    nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.tab == rhs.tab &&
         lhs.isRefreshing == rhs.isRefreshing &&
         lhs.accessibilityLabel == rhs.accessibilityLabel

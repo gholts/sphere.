@@ -107,7 +107,7 @@ nonisolated private struct BackendDataCache: Codable, Sendable {
 }
 
 nonisolated private enum BackendCacheCodec {
-    @concurrent
+    @Sendable
     static func decode(_ data: Data) async -> BackendDataCache? {
         try? JSONDecoder().decode(BackendDataCache.self, from: data)
     }

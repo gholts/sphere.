@@ -132,7 +132,7 @@ actor ProxyIconCache {
         return await decodeImageData(data, maxIconBytes: maxIconBytes)
     }
     
-    @concurrent
+    @Sendable
     nonisolated private static func decodeImageData(_ data: Data, maxIconBytes: Int) async -> CGImage? {
         guard data.count <= maxIconBytes,
               let source = CGImageSourceCreateWithData(data as CFData, nil)
