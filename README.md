@@ -10,3 +10,9 @@ Sphere is an iOS app for controlling your proxy backends, it comes with simplici
 ### `Preview`
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/ddcba9dd-904a-407b-9ce4-9cb718b1ad80"><source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/e9f4df36-9cd8-48e2-96ab-30c5b7f1517f"><img alt="Sphere" src="https://github.com/user-attachments/assets/e9f4df36-9cd8-48e2-96ab-30c5b7f1517f"></picture></p>
+
+### `Download`
+
+Visit releases and get the latest .ipa, or you can visit recent actions and get the beta version.
+
+<a href="https://stikstoreoss.github.io/altdirect/?url=https://gholts.github.io/sphere./altstore/release.json" align="left"><img src="https://github.com/user-attachments/assets/44a20389-fc3e-4cf9-9a88-4a0a9b754ca5" target="_blank" width="200"></a>
