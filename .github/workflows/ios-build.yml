@@ -115,7 +115,7 @@ jobs:
                     ),
                     downloadURL: $asset.browser_download_url,
                     size: $asset.size,
-                    buildVersion: null,
+                    buildVersion: "1",
                     minOSVersion: "18.6"
                   }
               )
@@ -130,15 +130,13 @@ jobs:
           jq -n \
             --slurpfile versions tmp/json/versions.json \
             --arg sourceName "Sphere Source" \
-            --arg sourceSubtitle "Proxy controller client" \
+            --arg sourceSubtitle "A proxy controller client." \
             --arg sourceDescription "" \
             --arg sourceIconURL "https://github.com/user-attachments/assets/86577a94-7e6f-4b31-b18e-f7a7271c4ad7" \
             --arg website "https://github.com/${GITHUB_REPOSITORY}/" \
-            --arg patreonURL "" \
             --arg tintColor "#16A34A" \
             --arg appName "Sphere" \
             --arg bundleIdentifier "dev.gholts.Sphere" \
-            --arg marketplaceID "" \
             --arg developerName "Hugo Lee" \
             --arg appSubtitle "Proxy controller client" \
             --arg appDescription "Sphere is an iOS app for managing LAN controller profiles." \
@@ -151,7 +149,6 @@ jobs:
               description: $sourceDescription,
               iconURL: $sourceIconURL,
               website: $website,
-              patreonURL: $patreonURL,
               tintColor: $tintColor,
               featuredApps: [
                 $bundleIdentifier
@@ -160,7 +157,6 @@ jobs:
                 {
                   name: $appName,
                   bundleIdentifier: $bundleIdentifier,
-                  marketplaceID: $marketplaceID,
                   developerName: $developerName,
                   subtitle: $appSubtitle,
                   localizedDescription: $appDescription,
@@ -174,11 +170,9 @@ jobs:
                     privacy: {
                       NSLocalNetworkUsageDescription: "Sphere connects to LAN controllers on your local network."
                     }
-                  },
-                  patreon: {}
+                  }
                 }
-              ],
-              "news": []
+              ]
             }
             ' > site/altstore/release.json
 
