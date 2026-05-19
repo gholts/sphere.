@@ -1,26 +1,25 @@
-//
-//  SphereApp.swift
-//  Sphere
-//
-//  Created by Gholts Li on 5/11/26.
-//
-
 import SwiftUI
 
 @main
 struct SphereApp: App {
-    init() {
-        SettingsBundleDefaults.write()
-    }
-
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .task {
+                    await SettingsBundleDefaults.writeAfterInitialRender()
+                }
         }
     }
 }
 
 private enum SettingsBundleDefaults {
+    @MainActor
+    static func writeAfterInitialRender() async {
+        await Task.yield()
+        try? await Task.sleep(for: .milliseconds(200))
+        write()
+    }
+    
     static func write(defaults: UserDefaults = .standard, bundle: Bundle = .main) {
         let version = bundle.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
         defaults.set("LAN controller access", forKey: "sphere.settings.localNetworkUse")

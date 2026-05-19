@@ -4,7 +4,7 @@ import Foundation
 nonisolated enum SphereProgressActivityKind: String, Codable, Hashable, Sendable {
     case coreUpdate = "core_update"
     case latencyTest = "latency_test"
-
+    
     var title: String {
         switch self {
         case .coreUpdate:
@@ -13,7 +13,7 @@ nonisolated enum SphereProgressActivityKind: String, Codable, Hashable, Sendable
             return "Latency Test"
         }
     }
-
+    
     var systemImage: String {
         switch self {
         case .coreUpdate:
@@ -36,16 +36,16 @@ nonisolated struct SphereProgressActivityAttributes: ActivityAttributes, Sendabl
         var detail: String
         var fraction: Double
         var status: SphereProgressActivityStatus
-
+        
         var clampedFraction: Double {
             min(max(fraction, 0), 1)
         }
-
+        
         var percentText: String {
             "\(Int((clampedFraction * 100).rounded()))%"
         }
     }
-
+    
     var operationID: String
     var kind: SphereProgressActivityKind
 }

@@ -1,97 +1,5 @@
 import Foundation
 
-nonisolated enum LogLevel: String, CaseIterable, Identifiable, Codable, Sendable {
-    case debug
-    case info
-    case warning
-    case error
-
-    var id: String { rawValue }
-}
-
-nonisolated enum ClashMode: String, CaseIterable, Identifiable, Codable, Sendable {
-    case rule = "Rule"
-    case global = "Global"
-    case direct = "Direct"
-
-    var id: String { rawValue }
-
-    nonisolated var mihomoValue: String { rawValue.lowercased() }
-
-    nonisolated init?(mihomoValue: String) {
-        guard let value = Self.allCases.first(where: { $0.rawValue.caseInsensitiveCompare(mihomoValue) == .orderedSame }) else {
-            return nil
-        }
-        self = value
-    }
-}
-
-nonisolated struct BackendOverview: Codable, Equatable, Sendable {
-    var version: String
-    var uptime: TimeInterval?
-    var memoryBytes: Int?
-    var uploadBytesPerSecond: Int?
-    var downloadBytesPerSecond: Int?
-    var activeConnections: Int?
-
-    static let empty = Self(
-        version: "Unknown",
-        uptime: nil,
-        memoryBytes: nil,
-        uploadBytesPerSecond: nil,
-        downloadBytesPerSecond: nil,
-        activeConnections: nil
-    )
-
-    enum CodingKeys: String, CodingKey {
-        case version
-        case uptime
-        case memoryBytes
-        case uploadBytesPerSecond
-        case downloadBytesPerSecond
-        case activeConnections
-        case memoryKB
-        case uploadKBps
-        case downloadKBps
-    }
-
-    init(
-        version: String,
-        uptime: TimeInterval?,
-        memoryBytes: Int?,
-        uploadBytesPerSecond: Int?,
-        downloadBytesPerSecond: Int?,
-        activeConnections: Int?
-    ) {
-        self.version = version
-        self.uptime = uptime
-        self.memoryBytes = memoryBytes
-        self.uploadBytesPerSecond = uploadBytesPerSecond
-        self.downloadBytesPerSecond = downloadBytesPerSecond
-        self.activeConnections = activeConnections
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        version = try container.decodeIfPresent(String.self, forKey: .version) ?? "Unknown"
-        uptime = try container.decodeIfPresent(TimeInterval.self, forKey: .uptime)
-        memoryBytes = try container.decodeIfPresent(Int.self, forKey: .memoryBytes) ?? container.decodeIfPresent(Int.self, forKey: .memoryKB)
-        uploadBytesPerSecond = try container.decodeIfPresent(Int.self, forKey: .uploadBytesPerSecond) ?? container.decodeIfPresent(Int.self, forKey: .uploadKBps)
-        downloadBytesPerSecond = try container.decodeIfPresent(Int.self, forKey: .downloadBytesPerSecond) ?? container.decodeIfPresent(Int.self, forKey: .downloadKBps)
-        activeConnections = try container.decodeIfPresent(Int.self, forKey: .activeConnections)
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(version, forKey: .version)
-        try container.encodeIfPresent(uptime, forKey: .uptime)
-        try container.encodeIfPresent(memoryBytes, forKey: .memoryBytes)
-        try container.encodeIfPresent(uploadBytesPerSecond, forKey: .uploadBytesPerSecond)
-        try container.encodeIfPresent(downloadBytesPerSecond, forKey: .downloadBytesPerSecond)
-        try container.encodeIfPresent(activeConnections, forKey: .activeConnections)
-    }
-}
-
 nonisolated struct ProxyItem: Identifiable, Equatable, Codable, Sendable {
     var id: String { name }
     var name: String
@@ -107,7 +15,7 @@ nonisolated struct ProxyItem: Identifiable, Equatable, Codable, Sendable {
     var providerName: String?
     var hidden: Bool?
     var delay: Int?
-
+    
     enum CodingKeys: String, CodingKey {
         case name
         case type
@@ -124,7 +32,7 @@ nonisolated struct ProxyItem: Identifiable, Equatable, Codable, Sendable {
         case history
         case delay
     }
-
+    
     init(
         name: String,
         type: String,
@@ -154,7 +62,7 @@ nonisolated struct ProxyItem: Identifiable, Equatable, Codable, Sendable {
         self.hidden = hidden
         self.delay = delay
     }
-
+    
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         name = try container.decodeIfPresent(String.self, forKey: .name) ?? ""
@@ -172,7 +80,7 @@ nonisolated struct ProxyItem: Identifiable, Equatable, Codable, Sendable {
         let history = try container.decodeIfPresent([DelayHistory].self, forKey: .history) ?? []
         delay = try container.decodeIfPresent(Int.self, forKey: .delay) ?? history.last?.delay
     }
-
+    
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(name, forKey: .name)
@@ -189,21 +97,21 @@ nonisolated struct ProxyItem: Identifiable, Equatable, Codable, Sendable {
         try container.encodeIfPresent(hidden, forKey: .hidden)
         try container.encodeIfPresent(delay, forKey: .delay)
     }
-
+    
     var isGroup: Bool {
         !all.isEmpty
     }
-
+    
     var metaBadges: [String] {
         var badges: [String] = []
         badges.append(type)
         if udp == true { badges.append("UDP") }
         if xudp == true { badges.append("XUDP") }
         if let fixed, !fixed.isEmpty {
-                badges.append("\n\(fixed)")
-            } else {
-                badges.append("auto")
-            }
+            badges.append("\n\(fixed)")
+        } else {
+            badges.append("auto")
+        }
         if let dialerProxy, !dialerProxy.isEmpty { badges.append("Dialer \(dialerProxy)") }
         return badges
     }
@@ -217,21 +125,21 @@ nonisolated struct DelayHistory: Codable, Equatable, Sendable {
 nonisolated struct ProxyCollection: Codable, Equatable, Sendable {
     var proxies: [ProxyItem]
     var groups: [ProxyItem]
-
+    
     enum CodingKeys: String, CodingKey {
         case proxies
         case groups
     }
-
+    
     init(proxies: [ProxyItem] = [], groups: [ProxyItem] = []) {
         self.proxies = proxies
         self.groups = groups
     }
-
+    
     func item(named name: String) -> ProxyItem? {
         proxies.first { $0.name == name } ?? groups.first { $0.name == name }
     }
-
+    
     func applyingDelayResults(_ delays: [String: Int]) -> Self {
         guard !delays.isEmpty else { return self }
         return Self(
@@ -239,7 +147,7 @@ nonisolated struct ProxyCollection: Codable, Equatable, Sendable {
             groups: groups.map { $0.applyingDelayResult(delays[$0.name]) }
         )
     }
-
+    
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         if let cachedGroups = try container.decodeIfPresent([ProxyItem].self, forKey: .groups) {
@@ -247,11 +155,11 @@ nonisolated struct ProxyCollection: Codable, Equatable, Sendable {
             groups = cachedGroups
             return
         }
-
+        
         let values = try container.nestedContainer(keyedBy: DynamicCodingKey.self, forKey: .proxies)
         let orderedProxies = try values.allKeys.map { try values.decode(ProxyItem.self, forKey: $0) }
         proxies = orderedProxies.filter { !$0.isGroup }
-
+        
         let groupCandidates = orderedProxies.filter(\.isGroup)
         if let global = orderedProxies.first(where: { $0.name == "GLOBAL" }), !global.all.isEmpty {
             let sourceOrder = Dictionary(uniqueKeysWithValues: groupCandidates.enumerated().map { ($0.element.name, $0.offset) })
@@ -274,7 +182,7 @@ nonisolated struct ProxyCollection: Codable, Equatable, Sendable {
             groups = groupCandidates
         }
     }
-
+    
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(proxies, forKey: .proxies)
@@ -301,12 +209,12 @@ nonisolated struct ProxyProvider: Identifiable, Codable, Equatable, Sendable {
     var usedBytes: Int64?
     var totalBytes: Int64?
     var proxies: [ProxyItem]
-
+    
     var remainingBytes: Int64? {
         guard let usedBytes, let totalBytes else { return nil }
         return max(0, totalBytes - usedBytes)
     }
-
+    
     enum CodingKeys: String, CodingKey {
         case name
         case type
@@ -318,7 +226,7 @@ nonisolated struct ProxyProvider: Identifiable, Codable, Equatable, Sendable {
         case proxies
         case subscriptionInfo
     }
-
+    
     init(
         name: String,
         type: String? = nil,
@@ -338,7 +246,7 @@ nonisolated struct ProxyProvider: Identifiable, Codable, Equatable, Sendable {
         self.totalBytes = totalBytes
         self.proxies = proxies
     }
-
+    
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         name = try container.decodeIfPresent(String.self, forKey: .name) ?? ""
@@ -351,7 +259,7 @@ nonisolated struct ProxyProvider: Identifiable, Codable, Equatable, Sendable {
         usedBytes = try container.decodeIfPresent(Int64.self, forKey: .usedBytes) ?? info?.usedBytes
         totalBytes = try container.decodeIfPresent(Int64.self, forKey: .totalBytes) ?? info?.totalBytes
     }
-
+    
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(name, forKey: .name)
@@ -367,15 +275,15 @@ nonisolated struct ProxyProvider: Identifiable, Codable, Equatable, Sendable {
 
 nonisolated struct ProviderCollection<T: Decodable & Identifiable & Equatable>: Decodable, Equatable {
     var providers: [T]
-
+    
     enum CodingKeys: String, CodingKey {
         case providers
     }
-
+    
     init(providers: [T] = []) {
         self.providers = providers
     }
-
+    
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         if let values = try? container.nestedContainer(keyedBy: DynamicCodingKey.self, forKey: .providers) {
@@ -391,7 +299,7 @@ nonisolated struct SubscriptionInfo: Codable, Equatable, Sendable {
     var download: Int64?
     var total: Int64?
     var expire: Int64?
-
+    
     var usedBytes: Int64? {
         switch (upload, download) {
         case let (.some(upload), .some(download)):
@@ -404,19 +312,19 @@ nonisolated struct SubscriptionInfo: Codable, Equatable, Sendable {
             return nil
         }
     }
-
+    
     var totalBytes: Int64? { total }
-
+    
     var remainingBytes: Int64? {
         guard let usedBytes, let total else { return nil }
         return max(0, total - usedBytes)
     }
-
+    
     var expireAt: Date? {
         guard let expire, expire > 0 else { return nil }
         return Date(timeIntervalSince1970: TimeInterval(expire))
     }
-
+    
     enum CodingKeys: String, CodingKey {
         case upload
         case download
@@ -427,7 +335,7 @@ nonisolated struct SubscriptionInfo: Codable, Equatable, Sendable {
         case upperTotal = "Total"
         case upperExpire = "Expire"
     }
-
+    
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         upload = try container.decodeIfPresent(Int64.self, forKey: .upload) ?? container.decodeIfPresent(Int64.self, forKey: .upperUpload)
@@ -435,335 +343,13 @@ nonisolated struct SubscriptionInfo: Codable, Equatable, Sendable {
         total = try container.decodeIfPresent(Int64.self, forKey: .total) ?? container.decodeIfPresent(Int64.self, forKey: .upperTotal)
         expire = try container.decodeIfPresent(Int64.self, forKey: .expire) ?? container.decodeIfPresent(Int64.self, forKey: .upperExpire)
     }
-
+    
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encodeIfPresent(upload, forKey: .upload)
         try container.encodeIfPresent(download, forKey: .download)
         try container.encodeIfPresent(total, forKey: .total)
         try container.encodeIfPresent(expire, forKey: .expire)
-    }
-}
-
-nonisolated struct MihomoVersionPayload: Decodable, Equatable, Sendable {
-    var version: String
-
-    enum CodingKeys: String, CodingKey {
-        case version
-    }
-
-    init(version: String) {
-        self.version = Self.clean(version)
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        version = Self.clean(try container.decodeIfPresent(String.self, forKey: .version) ?? "")
-    }
-
-    private static func clean(_ value: String) -> String {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "Unknown" : trimmed
-    }
-}
-
-nonisolated struct MihomoModePayload: Decodable, Equatable, Sendable {
-    var mode: ClashMode?
-
-    enum CodingKeys: String, CodingKey {
-        case mode
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        mode = try container.decodeIfPresent(String.self, forKey: .mode).flatMap(ClashMode.init(mihomoValue:))
-    }
-}
-
-nonisolated struct MemorySnapshot: Codable, Equatable, Sendable {
-    var inuse: Int?
-}
-
-nonisolated struct TrafficSnapshot: Codable, Equatable, Sendable {
-    var up: Int
-    var down: Int
-}
-
-nonisolated struct ProxyDelayPayload: Decodable, Equatable, Sendable {
-    var delay: Int?
-
-    enum CodingKeys: String, CodingKey {
-        case delay
-    }
-}
-
-nonisolated struct RuleItem: Identifiable, Codable, Equatable, Sendable {
-    var id: String {
-        if let index {
-            return "\(index)-\(type)-\(payload)-\(proxy)"
-        }
-        return "\(type)-\(payload)-\(proxy)"
-    }
-    var type: String
-    var payload: String
-    var proxy: String
-    var index: Int?
-
-    enum CodingKeys: String, CodingKey {
-        case type
-        case payload
-        case proxy
-        case index
-    }
-
-    var isRuleSet: Bool {
-        ["ruleset", "rule-set", "rule_set"].contains(normalizedType)
-    }
-
-    var isMatch: Bool {
-        normalizedType == "match"
-    }
-
-    var displayTitle: String {
-        if isMatch {
-            return "Match"
-        }
-        let value = payload.trimmingCharacters(in: .whitespacesAndNewlines)
-        return value.isEmpty ? type : value
-    }
-
-    private var normalizedType: String {
-        type.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-    }
-
-    init(type: String, payload: String, proxy: String, index: Int? = nil) {
-        self.type = type
-        self.payload = payload
-        self.proxy = Self.cleanProxyName(proxy)
-        self.index = index
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        type = try container.decodeIfPresent(String.self, forKey: .type) ?? ""
-        payload = try container.decodeIfPresent(String.self, forKey: .payload) ?? ""
-        proxy = Self.cleanProxyName(try container.decodeIfPresent(String.self, forKey: .proxy) ?? "")
-        index = try container.decodeIfPresent(Int.self, forKey: .index)
-    }
-
-    private static func cleanProxyName(_ value: String) -> String {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.hasPrefix("route("), trimmed.hasSuffix(")") else {
-            return value
-        }
-        return String(trimmed.dropFirst(6).dropLast())
-    }
-}
-
-nonisolated struct RuleCollection: Codable, Equatable, Sendable {
-    var rules: [RuleItem]
-}
-
-nonisolated struct RuleProvider: Identifiable, Codable, Equatable, Sendable {
-    var id: String { name }
-    var name: String
-    var type: String?
-    var vehicleType: String?
-    var behavior: String?
-    var format: String?
-    var updatedAt: String?
-    var ruleCount: Int?
-
-    var isRemote: Bool {
-        vehicleType?.caseInsensitiveCompare("Inline") != .orderedSame
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case name
-        case type
-        case vehicleType
-        case behavior
-        case format
-        case updatedAt
-        case ruleCount
-    }
-
-    init(
-        name: String,
-        type: String? = nil,
-        vehicleType: String? = nil,
-        behavior: String? = nil,
-        format: String? = nil,
-        updatedAt: String? = nil,
-        ruleCount: Int? = nil
-    ) {
-        self.name = name
-        self.type = type
-        self.vehicleType = vehicleType
-        self.behavior = behavior
-        self.format = format
-        self.updatedAt = updatedAt
-        self.ruleCount = ruleCount
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        name = try container.decodeIfPresent(String.self, forKey: .name) ?? ""
-        type = try container.decodeIfPresent(String.self, forKey: .type)
-        vehicleType = try container.decodeIfPresent(String.self, forKey: .vehicleType)
-        behavior = try container.decodeIfPresent(String.self, forKey: .behavior)
-        format = try container.decodeIfPresent(String.self, forKey: .format)
-        updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt)
-        ruleCount = try container.decodeIfPresent(Int.self, forKey: .ruleCount)
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(name, forKey: .name)
-        try container.encodeIfPresent(type, forKey: .type)
-        try container.encodeIfPresent(vehicleType, forKey: .vehicleType)
-        try container.encodeIfPresent(behavior, forKey: .behavior)
-        try container.encodeIfPresent(format, forKey: .format)
-        try container.encodeIfPresent(updatedAt, forKey: .updatedAt)
-        try container.encodeIfPresent(ruleCount, forKey: .ruleCount)
-    }
-}
-
-nonisolated struct ConnectionMetadata: Codable, Equatable, Sendable {
-    var network: String?
-    var type: String?
-    var sourceIP: String?
-    var destinationIP: String?
-    var host: String?
-    var process: String?
-}
-
-nonisolated struct ConnectionInfo: Identifiable, Codable, Equatable, Sendable {
-    var id: String
-    var metadata: ConnectionMetadata
-    var upload: Int64
-    var download: Int64
-    var start: String?
-    var chains: [String]
-    var rule: String?
-    var rulePayload: String?
-
-    var outbound: String {
-        chains.first ?? rule ?? ""
-    }
-}
-
-nonisolated struct ConnectionsSnapshot: Codable, Equatable, Sendable {
-    var uploadTotal: Int64?
-    var downloadTotal: Int64?
-    var connections: [ConnectionInfo]
-    var memory: Int?
-
-    init(uploadTotal: Int64?, downloadTotal: Int64?, connections: [ConnectionInfo], memory: Int? = nil) {
-        self.uploadTotal = uploadTotal
-        self.downloadTotal = downloadTotal
-        self.connections = connections
-        self.memory = memory
-    }
-}
-
-nonisolated struct ConnectionFilter: Equatable, Sendable {
-    var sourceIP = ""
-    var outbound = ""
-    var minimumDownloadBytes: Int64 = 0
-
-    func matches(_ connection: ConnectionInfo) -> Bool {
-        let sourceMatches = sourceIP.isEmpty || (connection.metadata.sourceIP ?? "").localizedStandardContains(sourceIP)
-        let outboundMatches = outbound.isEmpty || connection.outbound.localizedStandardContains(outbound)
-        return sourceMatches && outboundMatches && connection.download >= minimumDownloadBytes
-    }
-}
-
-nonisolated struct LogEntry: Identifiable, Decodable, Equatable, Sendable {
-    var id = UUID()
-    var type: String
-    var payload: String
-    var date = Date()
-
-    enum CodingKeys: String, CodingKey {
-        case type
-        case payload
-    }
-}
-
-nonisolated enum CoreUpdateChannel: String, CaseIterable, Identifiable, Sendable {
-    case release
-    case alpha
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .release:
-            return "Release"
-        case .alpha:
-            return "Alpha"
-        }
-    }
-}
-
-nonisolated struct CoreUpdateReport: Equatable, Sendable {
-    enum Status: Equatable, Sendable {
-        case success
-        case failure
-        case skipped
-    }
-
-    var channel: CoreUpdateChannel
-    var status: Status
-    var message: String
-
-    var title: String {
-        switch status {
-        case .success:
-            return "Update Finished"
-        case .failure:
-            return "Update Failed"
-        case .skipped:
-            return "Update Unavailable"
-        }
-    }
-
-    var systemImage: String {
-        switch status {
-        case .success:
-            return "checkmark.circle.fill"
-        case .failure:
-            return "xmark.circle.fill"
-        case .skipped:
-            return "exclamationmark.triangle.fill"
-        }
-    }
-
-    static func success(channel: CoreUpdateChannel) -> Self {
-        Self(channel: channel, status: .success, message: "\(channel.title) core update finished.")
-    }
-
-    static func failure(channel: CoreUpdateChannel, message: String) -> Self {
-        Self(channel: channel, status: .failure, message: "\(channel.title) core update failed. \(message)")
-    }
-
-    static func skipped(channel: CoreUpdateChannel) -> Self {
-        Self(channel: channel, status: .skipped, message: "Core update unavailable for current backend.")
-    }
-}
-
-nonisolated struct DynamicCodingKey: CodingKey {
-    var stringValue: String
-    var intValue: Int?
-
-    init?(stringValue: String) {
-        self.stringValue = stringValue
-    }
-
-    init?(intValue: Int) {
-        self.stringValue = String(intValue)
-        self.intValue = intValue
     }
 }
 

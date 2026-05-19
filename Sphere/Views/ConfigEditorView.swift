@@ -4,15 +4,15 @@ struct ConfigEditorView: View {
     @Environment(AppModel.self) private var app
     @State private var draft: [String: String] = [:]
     @State private var isLoadingConfig = false
-
+    
     private var configSections: [BackendConfigSection] {
         BackendConfigCatalog.sections(for: app.selectedProfile?.kind, configs: app.configs)
     }
-
+    
     private var editableFields: [BackendConfigField] {
         configSections.flatMap(\.fields)
     }
-
+    
     private var changedValues: [String: JSONValue] {
         editableFields.reduce(into: [:]) { result, field in
             guard
@@ -25,7 +25,7 @@ struct ConfigEditorView: View {
             }
         }
     }
-
+    
     var body: some View {
         List {
             if isLoadingConfig, app.configs.isEmpty {
@@ -67,7 +67,7 @@ struct ConfigEditorView: View {
                 }
                 .accessibilityLabel("Reload config")
                 .disabled(isLoadingConfig)
-
+                
                 Button {
                     Task { await save() }
                 } label: {
@@ -87,34 +87,34 @@ struct ConfigEditorView: View {
             pruneDraft()
         }
     }
-
+    
     private func binding(for field: BackendConfigField, value: JSONValue) -> Binding<String> {
         Binding(
             get: { draft[field.id] ?? field.control.displayText(for: value) },
             set: { draft[field.id] = $0 }
         )
     }
-
+    
     private func load() async {
         isLoadingConfig = true
         await app.loadConfig()
         isLoadingConfig = false
         pruneDraft()
     }
-
+    
     private func save() async {
         if await app.patchConfig(changedValues) {
             pruneDraft()
         }
     }
-
+    
     private func reload() async {
         isLoadingConfig = true
         await app.reloadConfig()
         isLoadingConfig = false
         pruneDraft()
     }
-
+    
     private func pruneDraft() {
         let validKeys = Set(editableFields.map(\.id))
         draft = draft.filter { key, _ in validKeys.contains(key) }
@@ -125,7 +125,7 @@ private struct ConfigFieldRow: View {
     var field: BackendConfigField
     var value: JSONValue
     @Binding var text: String
-
+    
     var body: some View {
         switch field.control {
         case .toggle:
@@ -160,40 +160,33 @@ private struct ConfigFieldRow: View {
             NavigationLink {
                 ConfigTextDetailEditor(title: field.title, text: $text, isMonospaced: true)
             } label: {
-                detailLabel(summary: text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Empty" : "Set")
+                ConfigFieldDetailLabel(
+                    title: field.title,
+                    summary: text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Empty" : "Set"
+                )
             }
         case .stringList, .numberList:
             NavigationLink {
                 ConfigTextDetailEditor(title: field.title, text: $text, isMonospaced: true)
             } label: {
-                detailLabel(summary: listSummary)
+                ConfigFieldDetailLabel(title: field.title, summary: listSummary)
             }
         case .json:
             NavigationLink {
                 ConfigTextDetailEditor(title: field.title, text: $text, isMonospaced: true)
             } label: {
-                detailLabel(summary: value.displayText)
+                ConfigFieldDetailLabel(title: field.title, summary: value.displayText)
             }
         }
     }
-
-    private func detailLabel(summary: String) -> some View {
-        HStack {
-            ConfigFieldLabel(title: field.title)
-            Spacer()
-            Text(summary)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-        }
-    }
-
+    
     private var boolBinding: Binding<Bool> {
         Binding(
             get: { ["true", "1", "yes", "on"].contains(text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) },
             set: { text = $0 ? "true" : "false" }
         )
     }
-
+    
     private var listSummary: String {
         let count = text
             .components(separatedBy: CharacterSet(charactersIn: ",\n"))
@@ -208,7 +201,7 @@ private struct ConfigTextDetailEditor: View {
     var title: String
     @Binding var text: String
     var isMonospaced: Bool
-
+    
     var body: some View {
         TextEditor(text: $text)
             .textInputAutocapitalization(.never)
@@ -223,9 +216,24 @@ private struct ConfigTextDetailEditor: View {
 
 private struct ConfigFieldLabel: View {
     var title: String
-
+    
     var body: some View {
         Text(title)
             .foregroundStyle(.primary)
+    }
+}
+
+private struct ConfigFieldDetailLabel: View {
+    var title: String
+    var summary: String
+    
+    var body: some View {
+        HStack {
+            ConfigFieldLabel(title: title)
+            Spacer()
+            Text(summary)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
     }
 }

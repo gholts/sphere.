@@ -2,7 +2,7 @@ import Foundation
 
 nonisolated protocol ProxyBackendClient: Sendable {
     var profile: APIProfile { get }
-
+    
     func testConnection() async throws -> BackendOverview
     func version() async throws -> String
     func overview() async throws -> BackendOverview
@@ -43,7 +43,7 @@ nonisolated enum BackendClientFactory {
 
 nonisolated struct UnsupportedBackendClient: ProxyBackendClient {
     var profile: APIProfile
-
+    
     func testConnection() throws -> BackendOverview { throw BackendError.unsupportedBackend(profile.kind.title) }
     func version() throws -> String { throw BackendError.unsupportedBackend(profile.kind.title) }
     func overview() throws -> BackendOverview { throw BackendError.unsupportedBackend(profile.kind.title) }
@@ -90,7 +90,7 @@ nonisolated enum BackendError: LocalizedError, Equatable, Sendable {
     case invalidResponse
     case httpStatus(Int, String)
     case unsupportedBackend(String)
-
+    
     var errorDescription: String? {
         switch self {
         case .invalidBaseURL:
@@ -107,7 +107,7 @@ nonisolated enum BackendError: LocalizedError, Equatable, Sendable {
 
 nonisolated private enum HTTPErrorBodyDisplay {
     nonisolated private static let preferredKeys = ["message", "error", "detail", "reason", "description"]
-
+    
     nonisolated static func message(from body: String) -> String {
         let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
         guard
@@ -116,10 +116,10 @@ nonisolated private enum HTTPErrorBodyDisplay {
         else {
             return trimmed
         }
-
+        
         return message(fromJSONObject: object) ?? trimmed
     }
-
+    
     nonisolated private static func message(fromJSONObject object: Any) -> String? {
         if let text = object as? String {
             return text

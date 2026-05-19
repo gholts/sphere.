@@ -3,7 +3,7 @@ import SwiftUI
 struct RuleView: View {
     @Environment(AppModel.self) private var app
     @State private var refreshingRuleSetNames: Set<String> = []
-
+    
     var body: some View {
         NavigationStack {
             let providers = ruleProviderLookup
@@ -30,11 +30,11 @@ struct RuleView: View {
             }
         }
     }
-
+    
     private var ruleProviderLookup: [String: RuleProvider] {
         Dictionary(app.ruleProviders.map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
     }
-
+    
     private func refreshRuleSet(_ name: String) {
         guard !refreshingRuleSetNames.contains(name) else { return }
         refreshingRuleSetNames.insert(name)
@@ -52,13 +52,13 @@ private struct RuleRow: View {
     var provider: RuleProvider?
     var isRefreshing: Bool
     var refresh: () -> Void
-
+    
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text(rule.displayTitle)
                     .lineLimit(2)
-                metadataRow
+                RuleMetadataRow(rule: rule, provider: provider)
             }
             Spacer()
             if provider?.isRemote == true {
@@ -81,9 +81,13 @@ private struct RuleRow: View {
             }
         }
     }
+}
 
-    @ViewBuilder
-    private var metadataRow: some View {
+private struct RuleMetadataRow: View {
+    var rule: RuleItem
+    var provider: RuleProvider?
+    
+    var body: some View {
         if rule.isMatch {
             Text(verbatim: rule.proxy.backendNameForDisplay)
                 .font(.caption)

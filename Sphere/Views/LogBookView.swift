@@ -3,7 +3,7 @@ import SwiftUI
 struct LogBookView: View {
     @Environment(AppModel.self) private var app
     @Environment(LiveState.self) private var logs
-
+    
     var body: some View {
         List {
             Section("Level") {
@@ -14,7 +14,7 @@ struct LogBookView: View {
                 }
                 .pickerStyle(.segmented)
             }
-
+            
             Section("Logs") {
                 if logs.logs.isEmpty {
                     Text("Waiting for logs")
@@ -43,7 +43,7 @@ struct LogBookView: View {
             await app.streamLogs(level: logs.logLevel)
         }
     }
-
+    
     private var levelBinding: Binding<LogLevel> {
         Binding(
             get: { logs.logLevel },
@@ -52,7 +52,7 @@ struct LogBookView: View {
             }
         )
     }
-
+    
     private func color(for type: String) -> Color {
         switch type.lowercased() {
         case "error":

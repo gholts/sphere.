@@ -1,10 +1,9 @@
 import SwiftUI
-import UIKit
 
 struct ProxiesView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-
+    
     private var proxyColumns: [GridItem] {
         [
             GridItem(
@@ -13,7 +12,7 @@ struct ProxiesView: View {
             ),
         ]
     }
-
+    
     var body: some View {
         NavigationStack {
             List {
@@ -35,7 +34,7 @@ struct ProxiesView: View {
                             }
                         }
                     }
-
+                    
                     Section {
                         ForEach(app.proxyCollection.groups) { group in
                             ProxyGroupSection(group: group, proxyColumns: proxyColumns)
@@ -68,15 +67,15 @@ struct ProxiesView: View {
             }
         }
     }
-
+    
     private var allProxyGroupsExpanded: Bool {
         app.areAllProxyGroupsExpanded(app.proxyCollection.groups)
     }
-
+    
     private var expansionActionTitle: String {
         allProxyGroupsExpanded ? "Collapse All" : "Expand All"
     }
-
+    
     private var expansionActionSymbol: String {
         allProxyGroupsExpanded ? "chevron.up" : "chevron.down"
     }
@@ -86,7 +85,7 @@ struct ProxyGroupExpansionButton: View {
     var title: String
     var symbol: String
     var action: () -> Void
-
+    
     var body: some View {
         Button(action: action) {
             HStack(spacing: 4) {
@@ -113,7 +112,7 @@ struct ProxyGroupExpansionButton: View {
 struct ProxyGroupSpeedTestButton: View {
     var isTesting: Bool
     var action: () -> Void
-
+    
     var body: some View {
         Button(action: action) {
             ZStack {
@@ -144,7 +143,7 @@ struct ProxyGroupSection: View {
     @State private var isExpanded = false
     var group: ProxyItem
     var proxyColumns: [GridItem]
-
+    
     var body: some View {
         Section {
             DisclosureGroup(isExpanded: $isExpanded) {
@@ -196,7 +195,7 @@ struct ProxyGroupSection: View {
 struct ProxyProviderRow: View {
     var provider: ProxyProvider
     var refresh: () -> Void
-
+    
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
@@ -228,7 +227,7 @@ struct ProxyChoiceButton: View {
     var proxy: ProxyItem?
     var isSelected: Bool
     var action: () -> Void
-
+    
     var body: some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 4) {
@@ -245,7 +244,7 @@ struct ProxyChoiceButton: View {
                         .frame(width: 14)
                         .accessibilityHidden(!isSelected)
                 }
-
+                
                 if let proxy {
                     HStack(spacing: 6) {
                         ProxyMetaLine(proxy: proxy)
@@ -269,7 +268,7 @@ struct ProxyChoiceButton: View {
 
 struct ProxyDelayBadge: View {
     var delay: Int?
-
+    
     var body: some View {
         Group {
             if let delay {
@@ -288,7 +287,7 @@ struct ProxyDelayBadge: View {
         }
         .frame(width: 50, height: 18, alignment: .trailing)
     }
-
+    
     private func label(for delay: Int) -> String {
         delay > 0 ? "\(delay) ms" : "Timeout"
     }
@@ -296,63 +295,12 @@ struct ProxyDelayBadge: View {
 
 struct ProxyMetaLine: View {
     var proxy: ProxyItem
-
+    
     var body: some View {
         Text(verbatim: proxy.metaBadges.map(\.backendNameForDisplay).joined(separator: " · "))
             .font(.caption2)
             .foregroundStyle(.secondary)
             .lineLimit(2)
             .multilineTextAlignment(.leading)
-    }
-}
-
-struct ProxyIconView: View {
-    var icon: String?
-    var size: CGFloat = 16
-
-    var body: some View {
-        if let icon, !icon.isEmpty {
-            iconBody(icon)
-                .frame(width: size, height: size)
-                .clipShape(.rect(cornerRadius: 3))
-                .accessibilityHidden(true)
-        }
-    }
-
-    @ViewBuilder
-    private func iconBody(_ icon: String) -> some View {
-        if icon.hasPrefix("data:image/svg+xml") {
-            Image(systemName: "network")
-                .resizable()
-                .scaledToFit()
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
-        } else {
-            CachedProxyIconImage(icon: icon)
-                .id(icon)
-        }
-    }
-}
-
-private struct CachedProxyIconImage: View {
-    var icon: String
-    @State private var image: UIImage?
-
-    var body: some View {
-        if let image {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFit()
-                .accessibilityHidden(true)
-        } else {
-            Color.clear
-                .task(id: icon) {
-                    if let cachedImage = ProxyIconCache.cachedImage(for: icon) {
-                        image = cachedImage
-                    } else {
-                        image = await ProxyIconCache.image(for: icon)
-                    }
-                }
-        }
     }
 }

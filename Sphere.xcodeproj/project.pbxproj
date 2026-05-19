@@ -353,11 +353,7 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SphereProgressWidgetExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited)";
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.gholts.Sphere.ProgressWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -384,11 +380,7 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SphereProgressWidgetExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited)";
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.gholts.Sphere.ProgressWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";

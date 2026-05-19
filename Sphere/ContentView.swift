@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  Sphere
-//
-//  Created by Gholts Li on 5/11/26.
-//
-
 import SwiftUI
 
 struct ContentView: View {

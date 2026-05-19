@@ -3,7 +3,7 @@ import Foundation
 enum EmojiTextNormalizer {
     static func normalized(_ value: String) -> String {
         guard value.contains("\\") || value.contains("&#") else { return value }
-
+        
         var output = ""
         var index = value.startIndex
         while index < value.endIndex {
@@ -13,24 +13,24 @@ enum EmojiTextNormalizer {
                 index = parsed.nextIndex
                 continue
             }
-
+            
             if value[index] == "&",
                let parsed = parseNumericEntity(in: value, at: index) {
                 output.append(parsed.text)
                 index = parsed.nextIndex
                 continue
             }
-
+            
             output.append(value[index])
             index = value.index(after: index)
         }
         return output
     }
-
+    
     private static func parseUnicodeEscape(in value: String, at index: String.Index) -> ParsedText? {
         let next = value.index(after: index)
         guard next < value.endIndex else { return nil }
-
+        
         switch value[next] {
         case "U":
             return parseFixedEscape(in: value, at: index, prefixLength: 2, hexLength: 8)
@@ -52,7 +52,7 @@ enum EmojiTextNormalizer {
             return nil
         }
     }
-
+    
     private static func parseFixedEscape(
         in value: String,
         at index: String.Index,
@@ -72,12 +72,12 @@ enum EmojiTextNormalizer {
         }
         return ParsedText(text: String(scalar), nextIndex: parsed.nextIndex)
     }
-
+    
     private static func parseBracedEscape(in value: String, at index: String.Index) -> ParsedText? {
         guard var cursor = value.index(index, offsetBy: 2, limitedBy: value.endIndex) else { return nil }
         guard cursor < value.endIndex, value[cursor] == "{" else { return nil }
         cursor = value.index(after: cursor)
-
+        
         var digits = ""
         while cursor < value.endIndex, value[cursor] != "}" {
             guard digits.count < 6, isHexDigit(value[cursor]) else { return nil }
@@ -93,7 +93,7 @@ enum EmojiTextNormalizer {
         }
         return ParsedText(text: String(scalar), nextIndex: value.index(after: cursor))
     }
-
+    
     private static func parseSurrogateTail(in value: String, at index: String.Index) -> HexParse? {
         guard index < value.endIndex,
               value[index] == "\\",
@@ -104,7 +104,7 @@ enum EmojiTextNormalizer {
         }
         return parsed
     }
-
+    
     private static func parseHexValue(
         in value: String,
         afterPrefixAt index: String.Index,
@@ -117,7 +117,7 @@ enum EmojiTextNormalizer {
             guard cursor <= value.endIndex else { return nil }
         }
         guard cursor <= value.endIndex else { return nil }
-
+        
         var digits = ""
         for _ in 0..<hexLength {
             guard cursor < value.endIndex, isHexDigit(value[cursor]) else { return nil }
@@ -127,19 +127,19 @@ enum EmojiTextNormalizer {
         guard let parsed = UInt32(digits, radix: 16) else { return nil }
         return HexParse(value: parsed, nextIndex: cursor)
     }
-
+    
     private static func parseNumericEntity(in value: String, at index: String.Index) -> ParsedText? {
         guard value.distance(from: index, to: value.endIndex) >= 4 else { return nil }
         var cursor = value.index(after: index)
         guard cursor < value.endIndex, value[cursor] == "#" else { return nil }
         cursor = value.index(after: cursor)
-
+        
         var radix = 10
         if cursor < value.endIndex, value[cursor] == "x" || value[cursor] == "X" {
             radix = 16
             cursor = value.index(after: cursor)
         }
-
+        
         var digits = ""
         while cursor < value.endIndex, value[cursor] != ";" {
             let character = value[cursor]
@@ -160,23 +160,23 @@ enum EmojiTextNormalizer {
         }
         return ParsedText(text: String(scalar), nextIndex: value.index(after: cursor))
     }
-
+    
     private static func combine(high: UInt32, low: UInt32) -> UInt32 {
         0x10000 + ((high - 0xD800) << 10) + (low - 0xDC00)
     }
-
+    
     private static func isHighSurrogate(_ value: UInt32) -> Bool {
         (0xD800...0xDBFF).contains(value)
     }
-
+    
     private static func isLowSurrogate(_ value: UInt32) -> Bool {
         (0xDC00...0xDFFF).contains(value)
     }
-
+    
     private static func isSurrogate(_ value: UInt32) -> Bool {
         (0xD800...0xDFFF).contains(value)
     }
-
+    
     private static func isHexDigit(_ character: Character) -> Bool {
         character.isHexDigit
     }
@@ -196,7 +196,7 @@ extension String {
     var emojiNormalizedForDisplay: String {
         EmojiTextNormalizer.normalized(self)
     }
-
+    
     var backendNameForDisplay: String {
         BackendNameDisplay.text(self)
     }
@@ -212,9 +212,9 @@ enum BackendNameDisplay {
     static func text(_ value: String) -> String {
         simulatorSafeFlagText(value.emojiNormalizedForDisplay)
     }
-
+    
     private static func simulatorSafeFlagText(_ value: String) -> String {
-        #if targetEnvironment(simulator)
+#if targetEnvironment(simulator)
         var output = String.UnicodeScalarView()
         let scalars = Array(value.unicodeScalars)
         var index = 0
@@ -231,9 +231,9 @@ enum BackendNameDisplay {
             }
         }
         return String(output)
-        #else
+#else
         return value
-        #endif
+#endif
     }
 }
 
@@ -241,7 +241,7 @@ private extension Unicode.Scalar {
     var isRegionalIndicator: Bool {
         (0x1F1E6...0x1F1FF).contains(value)
     }
-
+    
     var regionalIndicatorLetter: Character {
         UnicodeScalar(value - 0x1F1E6 + 65).map(Character.init) ?? "?"
     }

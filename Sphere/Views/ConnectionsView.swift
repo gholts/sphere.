@@ -4,20 +4,20 @@ struct ConnectionsView: View {
     @Environment(AppModel.self) private var app
     @Environment(LiveState.self) private var live
     @State private var showSheet = false
-
+    
     var body: some View {
         NavigationStack {
             List {
                 Section("Live") {
                     AdaptiveStatRows(metrics: liveMetrics)
                 }
-
+                
                 Button {
                     showSheet = true
                 } label: {
                     Label("Show Connections", systemImage: "list.bullet")
                 }
-
+                
                 Button(role: .destructive) {
                     Task { await app.closeAllConnections() }
                 } label: {
@@ -41,7 +41,7 @@ struct ConnectionsView: View {
             }
         }
     }
-
+    
     private var liveMetrics: [StatMetric] {
         [
             StatMetric(title: "Active", value: "\(live.connections.connections.count)"),
@@ -56,8 +56,7 @@ struct ConnectionsSheetView: View {
     @Environment(AppModel.self) private var app
     @Environment(LiveState.self) private var live
     @State private var filter = ConnectionFilter()
-    @State private var filteredConnections: [ConnectionInfo] = []
-
+    
     var body: some View {
         NavigationStack {
             List {
@@ -70,7 +69,7 @@ struct ConnectionsSheetView: View {
                         Text("Min download: \(ByteFormat.bytes(filter.minimumDownloadBytes))")
                     }
                 }
-
+                
                 Section("Connections") {
                     if filteredConnections.isEmpty {
                         Text("No matching connections")
@@ -98,25 +97,18 @@ struct ConnectionsSheetView: View {
                     .accessibilityLabel("Close all connections")
                 }
             }
-            .onAppear(perform: updateFilteredConnections)
-            .onChange(of: live.connections) {
-                updateFilteredConnections()
-            }
-            .onChange(of: filter) {
-                updateFilteredConnections()
-            }
         }
     }
-
-    private func updateFilteredConnections() {
-        filteredConnections = live.connections.connections.filter(filter.matches)
+    
+    private var filteredConnections: [ConnectionInfo] {
+        live.connections.connections.filter(filter.matches)
     }
 }
 
 struct ConnectionRow: View {
     var connection: ConnectionInfo
     var close: () -> Void
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
@@ -129,7 +121,7 @@ struct ConnectionRow: View {
                 .buttonStyle(.borderless)
                 .accessibilityLabel("Close connection")
             }
-
+            
             HStack {
                 Text(connection.metadata.sourceIP ?? "source n/a")
                 Spacer()
@@ -138,7 +130,7 @@ struct ConnectionRow: View {
             }
             .font(.caption)
             .foregroundStyle(.secondary)
-
+            
             HStack {
                 Label(ByteFormat.bytes(connection.upload), systemImage: "arrow.up")
                 Label(ByteFormat.bytes(connection.download), systemImage: "arrow.down")

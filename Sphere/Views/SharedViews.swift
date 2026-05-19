@@ -27,7 +27,7 @@ struct EmptyStateView: View {
     var title: String
     var message: String
     var systemImage: String
-
+    
     var body: some View {
         ContentUnavailableView(title, systemImage: systemImage, description: Text(message))
     }
@@ -39,7 +39,7 @@ struct DisabledAwareActionLabel: View {
     var isEnabled: Bool
     var enabledStyle: Color = .accentColor
     var disabledStyle: Color = .secondary
-
+    
     var body: some View {
         Label(title, systemImage: systemImage)
             .foregroundStyle(isEnabled ? enabledStyle : disabledStyle)
@@ -51,7 +51,7 @@ struct DisabledAwareActionIcon: View {
     var isEnabled: Bool
     var enabledStyle: Color = .accentColor
     var disabledStyle: Color = .secondary
-
+    
     var body: some View {
         Image(systemName: systemImage)
             .foregroundStyle(isEnabled ? enabledStyle : disabledStyle)
@@ -63,7 +63,7 @@ struct NavigationTitleBadge: View {
     var title: String
     var message: String?
     var isLoadingError = false
-
+    
     var body: some View {
         HStack(spacing: 8) {
             Text(title)
@@ -92,7 +92,7 @@ struct BackendPageToolbar: ViewModifier {
     @Environment(AppModel.self) private var app
     @Environment(\.iPadTopNavigationControls) private var iPadTopNavigationControls
     var tab: AppTab
-
+    
     func body(content: Content) -> some View {
         content
             .navigationTitle(tab.title)
@@ -123,7 +123,7 @@ struct BackendPageToolbar: ViewModifier {
 
 private struct IPadTopTabPicker: View {
     @Environment(AppModel.self) private var app
-
+    
     var body: some View {
         @Bindable var app = app
         Picker("Tab", selection: $app.selectedTab) {
@@ -147,13 +147,13 @@ struct RefreshToolbarButton: View, Equatable {
     var isRefreshing: Bool
     var accessibilityLabel: String
     var action: () -> Void
-
+    
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.tab == rhs.tab &&
-            lhs.isRefreshing == rhs.isRefreshing &&
-            lhs.accessibilityLabel == rhs.accessibilityLabel
+        lhs.isRefreshing == rhs.isRefreshing &&
+        lhs.accessibilityLabel == rhs.accessibilityLabel
     }
-
+    
     var body: some View {
         Button(action: action) {
             ZStack {
@@ -177,7 +177,7 @@ struct RefreshToolbarButton: View, Equatable {
 
 struct ErrorBadge: View {
     var message: String
-
+    
     var body: some View {
         Label(message, systemImage: "exclamationmark.triangle.fill")
             .font(.caption2)
@@ -209,7 +209,7 @@ extension AppTab {
 struct StatRow: View {
     var title: String
     var value: String
-
+    
     var body: some View {
         HStack {
             Text(title)
@@ -230,7 +230,7 @@ struct StatMetric: Identifiable, Equatable {
 enum ProfileFormPresentation: Identifiable {
     case add
     case edit(APIProfile)
-
+    
     var id: String {
         switch self {
         case .add:
@@ -239,7 +239,7 @@ enum ProfileFormPresentation: Identifiable {
             return profile.id.uuidString
         }
     }
-
+    
     var editingProfile: APIProfile? {
         switch self {
         case .add:
@@ -253,14 +253,14 @@ enum ProfileFormPresentation: Identifiable {
 struct AdaptiveStatRows: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     var metrics: [StatMetric]
-
+    
     private var columns: [GridItem] {
         [
             GridItem(.flexible(), spacing: 12),
             GridItem(.flexible(), spacing: 12),
         ]
     }
-
+    
     var body: some View {
         if horizontalSizeClass == .regular {
             LazyVGrid(columns: columns, alignment: .leading, spacing: 12) {
@@ -279,7 +279,7 @@ struct AdaptiveStatRows: View {
 
 private struct StatTile: View {
     var metric: StatMetric
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(metric.title)

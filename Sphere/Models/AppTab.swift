@@ -5,9 +5,9 @@ enum AppTab: String, CaseIterable, Identifiable, Hashable {
     case rule
     case connections
     case more
-
+    
     var id: String { rawValue }
-
+    
     var title: String {
         switch self {
         case .proxies:
@@ -20,7 +20,7 @@ enum AppTab: String, CaseIterable, Identifiable, Hashable {
             return "More"
         }
     }
-
+    
     var symbol: String {
         switch self {
         case .proxies:

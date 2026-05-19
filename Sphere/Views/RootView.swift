@@ -1,12 +1,14 @@
 import SwiftUI
-import UIKit
 
 struct RootView: View {
-    @State private var app = AppModel()
-
+    @State private var app = AppModel(loadsProfilesImmediately: false)
+    @State private var didLoadStartupData = false
+    
     var body: some View {
         Group {
-            if app.hasProfiles {
+            if !didLoadStartupData {
+                RootStartupView()
+            } else if app.hasProfiles {
                 AppTabView()
                     .environment(app)
                     .environment(app.liveState)
@@ -16,12 +18,23 @@ struct RootView: View {
                     .environment(app.liveState)
             }
         }
+        .task {
+            await loadStartupDataIfNeeded()
+        }
+    }
+    
+    @MainActor
+    private func loadStartupDataIfNeeded() async {
+        guard !didLoadStartupData else { return }
+        await InitialRenderDelay.wait()
+        await app.loadProfilesOffMain()
+        didLoadStartupData = true
     }
 }
 
 struct AppTabView: View {
     @Environment(AppModel.self) private var app
-
+    
     var body: some View {
         @Bindable var app = app
         TabView(selection: $app.selectedTab) {
@@ -38,7 +51,7 @@ struct AppTabView: View {
 
 private struct AppTabContent: View {
     var tab: AppTab
-
+    
     var body: some View {
         switch tab {
         case .proxies:
@@ -55,10 +68,12 @@ private struct AppTabContent: View {
 
 private struct VisibleRefreshLifecycle: ViewModifier {
     @Environment(AppModel.self) private var app
-
+    
     func body(content: Content) -> some View {
         content
             .task(id: VisibleRefreshKey(profileID: app.selectedProfileID, tab: app.selectedTab)) {
+                await InitialRenderDelay.wait()
+                await app.loadCachedDataIfNeeded()
                 await app.refreshSelectedTab(source: .automatic)
             }
             .task(id: AutoRefreshKey(profileID: app.selectedProfileID, tab: app.selectedTab, suspended: app.isAutoRefreshSuspended)) {
@@ -105,9 +120,16 @@ private struct LiveStreamKey: Equatable {
         case memory
         case traffic
     }
-
+    
     var profileID: UUID?
     var tab: AppTab
     var suspended: Bool
     var stream: Stream
+}
+
+private enum InitialRenderDelay {
+    static func wait() async {
+        await Task.yield()
+        try? await Task.sleep(for: .milliseconds(200))
+    }
 }
