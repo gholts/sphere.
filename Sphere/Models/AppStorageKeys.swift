@@ -6,4 +6,5 @@ nonisolated enum AppStorageKeys {
     static let proxyGroupExpandedPrefix = "sphere.proxyGroupExpanded"
     static let cachedDataPrefix = "sphere.cachedData"
     static let proxyGroupIconsPrefix = "sphere.proxyGroupIcons"
+    static let sourceIPTags = "sphere.sourceIPTags"
 }

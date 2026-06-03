@@ -9,7 +9,7 @@ struct ContentView: View {
 #Preview {
     let app = PreviewFixtures.app()
     Group {
-        ContentView()
+        // ContentView()
         AppTabView()
             .environment(app)
             .environment(app.liveState)

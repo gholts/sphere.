@@ -8,6 +8,7 @@ final class AppModel {
     let proxyStore: ProxyStore
     let configStore: ConfigStore
     let liveState: LiveState
+    let sourceIPTagStore: SourceIPTagStore
 
     var selectedTab: AppTab = .proxies
     var isLoading = false
@@ -19,6 +20,7 @@ final class AppModel {
     var toolbarRefreshingTabs: Set<AppTab> = []
     var backendErrorDebounceRevision = 0
     var cacheSaveRevision = 0
+    var sourceIPTags: [SourceIPTag] = []
 
     @ObservationIgnored let defaults: UserDefaults
     @ObservationIgnored let makeClient: @MainActor (APIProfile) -> any ProxyBackendClient
@@ -47,6 +49,9 @@ final class AppModel {
         self.proxyStore = ProxyStore(defaults: defaults)
         self.configStore = ConfigStore()
         self.liveState = LiveState()
+        let tagStore = SourceIPTagStore(defaults: defaults)
+        self.sourceIPTagStore = tagStore
+        self.sourceIPTags = tagStore.tags
         self.backendErrorDebounceDuration = backendErrorDebounceDuration
         self.progressActivityReporter =
             progressActivityReporter ?? ProgressActivityReporterFactory.makeDefault()
