@@ -3,7 +3,8 @@
 ### `Sphere`
 
 [CI Build](https://github.com/gholts/sphere./actions/workflows/ios-build.yml) •
-[Release](https://github.com/gholts/sphere./releases/tag/latest)
+[Release](https://github.com/gholts/sphere./releases/tag/latest) •
+[Telegram](https://t.me/x0x0x0000x0)
 
 Sphere is an iOS app for controlling your proxy backends, it comes with simplicity and gorgeous native design language.
 
