@@ -116,7 +116,7 @@ jobs:
                     downloadURL: $asset.browser_download_url,
                     size: $asset.size,
                     buildVersion: "1",
-                    minOSVersion: "18.6"
+                    minOSVersion: "26.0"
                   }
               )
             | .[:50]
