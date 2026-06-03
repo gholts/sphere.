@@ -70,7 +70,7 @@ private struct RuleRow: View {
                         Image(systemName: "arrow.clockwise")
                             .opacity(isRefreshing ? 0 : 1)
                         if isRefreshing {
-                            ProgressView()
+                            unsafe ProgressView()
                                 .controlSize(.small)
                                 .transition(.opacity.combined(with: .scale(scale: 0.92)))
                         }

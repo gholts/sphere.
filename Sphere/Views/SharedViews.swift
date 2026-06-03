@@ -8,7 +8,7 @@ extension Animation {
 
 extension AnyTransition {
     static var spinnerBadgeAppearance: AnyTransition {
-        .asymmetric(
+        unsafe .asymmetric(
             insertion: .scale(scale: 0.45).combined(with: .opacity),
             removal: .scale(scale: 0.82).combined(with: .opacity)
         )

@@ -1,4 +1,4 @@
-@preconcurrency import ActivityKit
+@preconcurrency @unsafe import ActivityKit
 import Foundation
 
 @MainActor

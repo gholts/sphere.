@@ -587,11 +587,11 @@ extension Dictionary where Key == String, Value == JSONValue {
         } else if case .object(let original)? = originals[rootKey] {
             rootValues = original
         } else {
-            mergeJSONPatch(Dictionary.jsonPatch(path: path, value: value))
+            mergeJSONPatch(Self.jsonPatch(path: path, value: value))
             return
         }
 
-        rootValues.mergeJSONPatch(Dictionary.jsonPatch(path: Array(path.dropFirst()), value: value))
+        rootValues.mergeJSONPatch(Self.jsonPatch(path: Array(path.dropFirst()), value: value))
         self[rootKey] = .object(rootValues)
     }
 
