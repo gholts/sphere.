@@ -213,19 +213,38 @@ nonisolated struct SurgeGroupTestPayload: Decodable, Equatable, Sendable {
 }
 
 nonisolated enum SurgeRefreshMessage {
+    private static let successMessage =
+        "Policy group refresh requested."
+
     static func message(from data: Data) -> String? {
         guard !data.isEmpty else { return nil }
         if let value = try? JSONDecoder().decode(JSONValue.self, from: data) {
             let message =
-                value.string(for: "message", "result", "status", "detail")
-                ?? value.stringValue
-                ?? value.prettyJSONText
+                value.trimmedString(for: "message", "detail", "error", "reason", "description")
+                ?? statusMessage(from: value)
+                ?? reloadOutcomeMessage(from: value)
+                ?? value.trimmedScalarString
+            guard let message else { return nil }
             let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
             return trimmed.isEmpty ? nil : trimmed
         }
         guard let text = String(data: data, encoding: .utf8)?
             .trimmingCharacters(in: .whitespacesAndNewlines) else { return nil }
         return text.isEmpty ? nil : text
+    }
+
+    private static func statusMessage(from value: JSONValue) -> String? {
+        guard let status = value.trimmedString(for: "status", "result") else { return nil }
+        let normalized = status.lowercased()
+        if ["ok", "success", "succeeded", "successful"].contains(normalized) {
+            return successMessage
+        }
+        return "Surge profile reload status: \(status)"
+    }
+
+    private static func reloadOutcomeMessage(from value: JSONValue) -> String? {
+        guard let success = value.bool(for: "success", "ok", "result") else { return nil }
+        return success ? successMessage : "Policy group refresh failed. Surge reported failure."
     }
 }
 
@@ -460,6 +479,21 @@ private extension JSONValue {
         default:
             return nil
         }
+    }
+
+    nonisolated var trimmedScalarString: String? {
+        guard case .string(let value) = self else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    nonisolated func trimmedString(for keys: String...) -> String? {
+        for key in keys {
+            if let value = objectValue[key]?.trimmedScalarString {
+                return value
+            }
+        }
+        return nil
     }
 
     nonisolated func string(for keys: String...) -> String? {

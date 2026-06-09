@@ -208,7 +208,7 @@ nonisolated struct SurgeClient: ProxyBackendClient {
         return ProxyGroupRefreshReport(
             groupName: group,
             message: SurgeRefreshMessage.message(from: data)
-                ?? "Profile reload requested. Surge returned no provider refresh detail."
+                ?? "Policy group refresh requested."
         )
     }
 
