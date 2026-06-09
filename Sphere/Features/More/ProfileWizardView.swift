@@ -47,7 +47,8 @@ struct ProfileWizardView: View {
                         .keyboardType(.URL)
                         .autocorrectionDisabled()
                     SecureField("Secret", text: $secret)
-                        .textContentType(nil)
+                        .textContentType(.oneTimeCode)
+                        .keyboardType(.asciiCapable)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
 
