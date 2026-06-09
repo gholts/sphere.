@@ -4,6 +4,7 @@ struct ConnectionsView: View {
     @Environment(AppModel.self) private var app
     @Environment(LiveState.self) private var live
     @State private var showSheet = false
+    @State private var handledNavigationRequestID: UUID?
 
     var body: some View {
         NavigationStack {
@@ -40,6 +41,12 @@ struct ConnectionsView: View {
                     .environment(app)
                     .environment(live)
             }
+            .onChange(of: app.navigationRequest) { _, request in
+                handleNavigationRequest(request)
+            }
+            .onAppear {
+                handleNavigationRequest(app.navigationRequest)
+            }
         }
     }
 
@@ -60,6 +67,20 @@ struct ConnectionsView: View {
 
     private var sourceIPs: [String] {
         app.currentSourceIPs(from: live.connections.connections)
+    }
+
+    private func handleNavigationRequest(_ request: AppNavigationRequest?) {
+        guard let request, handledNavigationRequestID != request.id else { return }
+        switch request.destination {
+        case .connectionsList:
+            showSheet = true
+            handledNavigationRequestID = request.id
+        case .tab(.connections):
+            showSheet = false
+            handledNavigationRequestID = request.id
+        default:
+            break
+        }
     }
 }
 

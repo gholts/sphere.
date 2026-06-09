@@ -8,9 +8,11 @@ struct MoreView: View {
     @State private var coreUpdateDialog: CoreUpdateDialog?
     @State private var mitmCertificateURL: URL?
     @State private var isDownloadingMitmCertificate = false
+    @State private var navigationPath: [MoreRoute] = []
+    @State private var handledNavigationRequestID: UUID?
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             List {
                 Section("Backend") {
                     Picker("Profile", selection: profileBinding) {
@@ -57,15 +59,11 @@ struct MoreView: View {
                 }
 
                 Section("Tools") {
-                    NavigationLink {
-                        ConfigEditorView()
-                    } label: {
+                    NavigationLink(value: MoreRoute.configEditor) {
                         Label("Configuration", systemImage: "slider.horizontal.3")
                     }
 
-                    NavigationLink {
-                        LogBookView()
-                    } label: {
+                    NavigationLink(value: MoreRoute.logBook) {
                         Label("Log Book", systemImage: "doc.text.magnifyingglass")
                     }
 
@@ -127,8 +125,22 @@ struct MoreView: View {
             .sheet(item: $coreUpdateDialog) { dialog in
                 CoreUpdateDialogView(dialog: dialog)
             }
+            .navigationDestination(for: MoreRoute.self) { route in
+                switch route {
+                case .configEditor:
+                    ConfigEditorView()
+                case .logBook:
+                    LogBookView()
+                }
+            }
             .onChange(of: app.selectedProfileID) {
                 mitmCertificateURL = nil
+            }
+            .onChange(of: app.navigationRequest) { _, request in
+                handleNavigationRequest(request)
+            }
+            .onAppear {
+                handleNavigationRequest(app.navigationRequest)
             }
         }
     }
@@ -160,6 +172,39 @@ struct MoreView: View {
         defer { isDownloadingMitmCertificate = false }
         mitmCertificateURL = await app.downloadSurgeMITMCertificate()
     }
+
+    private func handleNavigationRequest(_ request: AppNavigationRequest?) {
+        guard let request, handledNavigationRequestID != request.id else { return }
+        switch request.destination {
+        case .tab(.more):
+            navigationPath.removeAll()
+            handledNavigationRequestID = request.id
+        case .addProfile:
+            navigationPath.removeAll()
+            profileForm = .add
+            handledNavigationRequestID = request.id
+        case .editProfile(let profileID):
+            guard let profile = app.profiles.first(where: { $0.id == profileID }) else { return }
+            navigationPath.removeAll()
+            profileForm = .edit(profile)
+            handledNavigationRequestID = request.id
+        case .configEditor:
+            profileForm = nil
+            navigationPath = [.configEditor]
+            handledNavigationRequestID = request.id
+        case .logBook:
+            profileForm = nil
+            navigationPath = [.logBook]
+            handledNavigationRequestID = request.id
+        case .connectionsList, .tab:
+            break
+        }
+    }
+}
+
+private enum MoreRoute: Hashable {
+    case configEditor
+    case logBook
 }
 
 private struct CoreUpdateDialog: Identifiable, Equatable {

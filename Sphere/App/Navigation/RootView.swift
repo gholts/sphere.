@@ -3,6 +3,7 @@ import SwiftUI
 struct RootView: View {
     @State private var app = AppModel(loadsProfilesImmediately: false)
     @State private var didLoadStartupData = false
+    @State private var pendingURLSchemeURLs: [URL] = []
 
     var body: some View {
         Group {
@@ -25,6 +26,17 @@ struct RootView: View {
         .task {
             await loadStartupDataIfNeeded()
         }
+        .onOpenURL { url in
+            pendingURLSchemeURLs.append(url)
+            Task {
+                await handlePendingURLSchemeURLsIfReady()
+            }
+        }
+        .onChange(of: didLoadStartupData) {
+            Task {
+                await handlePendingURLSchemeURLsIfReady()
+            }
+        }
     }
 
     @MainActor
@@ -35,6 +47,16 @@ struct RootView: View {
             await app.loadCachedDataIfNeeded()
         }
         didLoadStartupData = true
+    }
+
+    @MainActor
+    private func handlePendingURLSchemeURLsIfReady() async {
+        guard didLoadStartupData else { return }
+        let urls = pendingURLSchemeURLs
+        pendingURLSchemeURLs.removeAll()
+        for url in urls {
+            await app.handleURLScheme(url)
+        }
     }
 }
 

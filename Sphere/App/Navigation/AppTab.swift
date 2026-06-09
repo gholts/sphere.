@@ -1,6 +1,6 @@
 import Foundation
 
-enum AppTab: String, CaseIterable, Identifiable, Hashable {
+enum AppTab: String, CaseIterable, Identifiable, Hashable, Sendable {
     case proxies
     case rule
     case connections

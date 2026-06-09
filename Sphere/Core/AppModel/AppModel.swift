@@ -17,6 +17,7 @@ final class AppModel {
     var isAutoRefreshSuspended = false
     var isBackendErrorDebouncing = false
     var isManualRefreshActive = false
+    var navigationRequest: AppNavigationRequest?
     var toolbarRefreshingTabs: Set<AppTab> = []
     var backendErrorDebounceRevision = 0
     var cacheSaveRevision = 0
