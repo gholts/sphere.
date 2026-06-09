@@ -4,6 +4,8 @@ import Foundation
 nonisolated enum SphereProgressActivityKind: String, Codable, Hashable, Sendable {
     case coreUpdate = "core_update"
     case latencyTest = "latency_test"
+    case proxyProvider = "proxy_provider"
+    case ruleProvider = "rule_provider"
 
     var title: String {
         switch self {
@@ -11,6 +13,10 @@ nonisolated enum SphereProgressActivityKind: String, Codable, Hashable, Sendable
             return "Core Update"
         case .latencyTest:
             return "Latency Test"
+        case .proxyProvider:
+            return "Proxy Provider"
+        case .ruleProvider:
+            return "Rule Provider"
         }
     }
 
@@ -20,6 +26,10 @@ nonisolated enum SphereProgressActivityKind: String, Codable, Hashable, Sendable
             return "arrow.down.circle"
         case .latencyTest:
             return "speedometer"
+        case .proxyProvider:
+            return "shippingbox"
+        case .ruleProvider:
+            return "list.bullet.rectangle"
         }
     }
 }

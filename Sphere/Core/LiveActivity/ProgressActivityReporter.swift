@@ -31,6 +31,9 @@ enum ProgressActivityFractions {
     static let coreRefreshing = 0.85
     static let latencyGroupTestingWeight = 0.9
     static let latencyRefreshing = 0.95
+    static let providerStarted = 0.12
+    static let providerRefreshing = 0.45
+    static let providerReloading = 0.82
 }
 
 struct NoopProgressActivityReporter: ProgressActivityReporting {

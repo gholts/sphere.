@@ -13,10 +13,38 @@ extension AppModel {
 
     func refreshProxyProvider(_ name: String) async {
         guard let client else { return }
-        _ = await captureErrors {
+        await progressActivityReporter.start(
+            kind: .proxyProvider,
+            detail: name,
+            fraction: ProgressActivityFractions.providerStarted
+        )
+        let outcome = await captureErrors {
+            await progressActivityReporter.update(
+                kind: .proxyProvider,
+                detail: "Refreshing \(name)",
+                fraction: ProgressActivityFractions.providerRefreshing
+            )
             try await client.refreshProxyProvider(name)
+            await progressActivityReporter.update(
+                kind: .proxyProvider,
+                detail: "Reloading providers",
+                fraction: ProgressActivityFractions.providerReloading
+            )
             proxyProviders = try await client.proxyProviders()
             saveCachedDataIfUseful()
+        }
+        if outcome.errorMessage == nil {
+            await progressActivityReporter.finish(
+                kind: .proxyProvider,
+                status: .succeeded,
+                detail: "Proxy provider refreshed"
+            )
+        } else {
+            await progressActivityReporter.finish(
+                kind: .proxyProvider,
+                status: .failed,
+                detail: "Proxy provider refresh failed"
+            )
         }
     }
 
