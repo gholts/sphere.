@@ -166,7 +166,6 @@ jobs:
                   screenshots: [],
                   versions: $versions[0],
                   appPermissions: {
-                    entitlements: [],
                     privacy: {
                       NSLocalNetworkUsageDescription: "Sphere connects to LAN controllers on your local network."
                     }
