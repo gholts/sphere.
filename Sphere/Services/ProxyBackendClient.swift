@@ -15,6 +15,7 @@ nonisolated protocol ProxyBackendClient: Sendable {
     func selectProxy(group: String, proxy: String) async throws
     func delayProxy(_ proxy: String, url: String, timeout: Int) async throws -> Int?
     func delayProxyGroup(_ group: String, url: String, timeout: Int) async throws -> [String: Int]
+    func refreshProxyGroup(_ group: String) async throws -> ProxyGroupRefreshReport
     func proxyProviders() async throws -> [ProxyProvider]
     func refreshProxyProvider(_ name: String) async throws
     func rules() async throws -> [RuleItem]
@@ -28,6 +29,13 @@ nonisolated protocol ProxyBackendClient: Sendable {
     func connectionEvents(interval: Int) -> AsyncThrowingStream<ConnectionsSnapshot, Error>
     func memoryEvents() -> AsyncThrowingStream<MemorySnapshot, Error>
     func trafficEvents() -> AsyncThrowingStream<TrafficSnapshot, Error>
+    func mitmCertificate() async throws -> Data
+}
+
+extension ProxyBackendClient {
+    func mitmCertificate() async throws -> Data {
+        throw BackendError.unsupportedBackend(profile.kind.title)
+    }
 }
 
 nonisolated enum BackendClientFactory {
@@ -37,6 +45,8 @@ nonisolated enum BackendClientFactory {
             return MihomoClient(profile: profile)
         case .singbox:
             return SingboxClient(profile: profile)
+        case .surge:
+            return SurgeClient(profile: profile)
         }
     }
 }
@@ -74,6 +84,9 @@ nonisolated struct UnsupportedBackendClient: ProxyBackendClient {
         throw BackendError.unsupportedBackend(profile.kind.title)
     }
     func delayProxyGroup(_: String, url _: String, timeout _: Int) throws -> [String: Int] {
+        throw BackendError.unsupportedBackend(profile.kind.title)
+    }
+    func refreshProxyGroup(_: String) throws -> ProxyGroupRefreshReport {
         throw BackendError.unsupportedBackend(profile.kind.title)
     }
     func proxyProviders() throws -> [ProxyProvider] {
@@ -209,7 +222,9 @@ nonisolated struct URLRequestFactory {
         var request = URLRequest(
             url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: timeoutInterval)
         request.httpMethod = method
-        if !profile.secret.isEmpty {
+        if !profile.secret.isEmpty, profile.kind == .surge {
+            request.setValue(profile.secret, forHTTPHeaderField: "X-Key")
+        } else if !profile.secret.isEmpty {
             request.setValue("Bearer \(profile.secret)", forHTTPHeaderField: "Authorization")
         }
         if let body {

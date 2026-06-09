@@ -6,6 +6,8 @@ struct MoreView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var profileForm: ProfileFormPresentation?
     @State private var coreUpdateDialog: CoreUpdateDialog?
+    @State private var mitmCertificateURL: URL?
+    @State private var isDownloadingMitmCertificate = false
 
     var body: some View {
         NavigationStack {
@@ -34,7 +36,7 @@ struct MoreView: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    OverviewRows(overview: live.overview)
+                    OverviewRows(overview: live.overview, backendKind: app.selectedProfile?.kind)
                 }
 
                 if app.canUpdateCore {
@@ -66,6 +68,27 @@ struct MoreView: View {
                     } label: {
                         Label("Log Book", systemImage: "doc.text.magnifyingglass")
                     }
+
+                    if app.selectedProfile?.kind == .surge {
+                        if let mitmCertificateURL {
+                            ShareLink(item: mitmCertificateURL) {
+                                Label(
+                                    "Share MITM CA Certificate",
+                                    systemImage: "square.and.arrow.up")
+                            }
+                        } else {
+                            Button {
+                                Task { await downloadMITMCertificate() }
+                            } label: {
+                                DisabledAwareActionLabel(
+                                    title: "Share MITM CA Certificate",
+                                    systemImage: "square.and.arrow.up",
+                                    isEnabled: !isDownloadingMitmCertificate
+                                )
+                            }
+                            .disabled(isDownloadingMitmCertificate)
+                        }
+                    }
                 }
 
                 Section("Profiles") {
@@ -83,7 +106,7 @@ struct MoreView: View {
                                 Spacer()
                                 Image(systemName: "chevron.right")
                                     .font(.caption)
-                                    .foregroundStyle(.tertiary)
+                                    .foregroundStyle(.primary)
                                     .accessibilityHidden(true)
                             }
                         }
@@ -93,6 +116,9 @@ struct MoreView: View {
                 }
             }
             .backendPageToolbar(tab: .more)
+            .refreshable {
+                await app.refreshAll(source: .pullToRefresh)
+            }
             .sheet(item: $profileForm) { form in
                 ProfileWizardView(editingProfile: form.editingProfile, canDismiss: true)
                     .environment(app)
@@ -101,8 +127,8 @@ struct MoreView: View {
             .sheet(item: $coreUpdateDialog) { dialog in
                 CoreUpdateDialogView(dialog: dialog)
             }
-            .refreshable {
-                await app.refreshAll(source: .pullToRefresh)
+            .onChange(of: app.selectedProfileID) {
+                mitmCertificateURL = nil
             }
         }
     }
@@ -127,6 +153,12 @@ struct MoreView: View {
             let report = await app.upgradeCore(channel: channel)
             coreUpdateDialog = CoreUpdateDialog(channel: channel, phase: .finished(report))
         }
+    }
+
+    private func downloadMITMCertificate() async {
+        isDownloadingMitmCertificate = true
+        defer { isDownloadingMitmCertificate = false }
+        mitmCertificateURL = await app.downloadSurgeMITMCertificate()
     }
 }
 
@@ -240,18 +272,28 @@ private struct CoreUpdateDialogIcon: View {
 
 struct OverviewRows: View {
     var overview: BackendOverview
+    var backendKind: BackendKind?
 
     var body: some View {
-        AdaptiveStatRows(metrics: [
-            StatMetric(title: "Version", value: overview.version),
-            StatMetric(title: "Memory", value: ByteFormat.memoryBytes(overview.memoryBytes)),
+        AdaptiveStatRows(metrics: metrics)
+    }
+
+    private var metrics: [StatMetric] {
+        var values: [StatMetric] = []
+        if backendKind != .surge {
+            values.append(StatMetric(title: "Version", value: overview.version))
+            values.append(
+                StatMetric(title: "Memory", value: ByteFormat.memoryBytes(overview.memoryBytes)))
+        }
+        values.append(
+            StatMetric(title: "Upload", value: ByteFormat.speedBytes(overview.uploadBytesPerSecond)))
+        values.append(
             StatMetric(
-                title: "Upload", value: ByteFormat.speedBytes(overview.uploadBytesPerSecond)),
-            StatMetric(
-                title: "Download", value: ByteFormat.speedBytes(overview.downloadBytesPerSecond)),
+                title: "Download", value: ByteFormat.speedBytes(overview.downloadBytesPerSecond)))
+        values.append(
             StatMetric(
                 title: "Active Connections",
-                value: overview.activeConnections.map(String.init) ?? "n/a"),
-        ])
+                value: overview.activeConnections.map(String.init) ?? "n/a"))
+        return values
     }
 }

@@ -3,6 +3,7 @@ import SwiftUI
 struct ProxiesView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var proxyGroupRefreshAlert: ProxyGroupRefreshAlert?
 
     private var proxyColumns: [GridItem] {
         [
@@ -40,7 +41,14 @@ struct ProxiesView: View {
 
                     Section {
                         ForEach(app.proxyCollection.groups) { group in
-                            ProxyGroupSection(group: group, proxyColumns: proxyColumns)
+                            ProxyGroupSection(
+                                group: group,
+                                proxyColumns: proxyColumns,
+                                showsLatency: showsProxyLatency,
+                                canRefresh: canRefreshProxyGroups
+                            ) {
+                                Task { await refreshProxyGroup(group.name) }
+                            }
                         }
                     } header: {
                         HStack(alignment: .center) {
@@ -57,9 +65,6 @@ struct ProxiesView: View {
                                             groups: app.proxyCollection.groups)
                                     }
                                 }
-                                ProxyGroupSpeedTestButton(isTesting: app.isTestingProxyGroupDelays) {
-                                    Task { await app.testProxyGroupDelays() }
-                                }
                             }
                             .frame(height: 18, alignment: .center)
                         }
@@ -69,6 +74,22 @@ struct ProxiesView: View {
             .backendPageToolbar(tab: .proxies)
             .refreshable {
                 await app.refreshProxies(source: .pullToRefresh)
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    if showsProxyLatency, !app.proxyCollection.groups.isEmpty {
+                        ProxyGroupSpeedTestButton(isTesting: app.isTestingProxyGroupDelays) {
+                            Task { await app.testProxyGroupDelays() }
+                        }
+                    }
+                }
+            }
+            .alert(item: $proxyGroupRefreshAlert) { alert in
+                Alert(
+                    title: Text(verbatim: alert.groupName.backendNameForDisplay),
+                    message: Text(verbatim: alert.message),
+                    dismissButton: .default(Text("OK"))
+                )
             }
         }
     }
@@ -80,6 +101,19 @@ struct ProxiesView: View {
 
     private var expansionActionTitle: String {
         allProxyGroupsExpanded ? "Collapse All" : "Expand All"
+    }
+
+    private var showsProxyLatency: Bool {
+        app.selectedProfile?.kind.supportsProxyLatencyTesting == true
+    }
+
+    private var canRefreshProxyGroups: Bool {
+        app.selectedProfile?.kind.supportsProxyGroupRefresh == true
+    }
+
+    private func refreshProxyGroup(_ groupName: String) async {
+        let report = await app.refreshProxyGroup(groupName)
+        proxyGroupRefreshAlert = ProxyGroupRefreshAlert(report: report)
     }
 }
 
@@ -118,27 +152,23 @@ struct ProxyGroupSpeedTestButton: View {
     var action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            ZStack {
-                Image(systemName: "speedometer")
-                    .opacity(isTesting ? 0 : 1)
-                    .accessibilityHidden(true)
-                if isTesting {
-                    ProgressView()
-                        .controlSize(.mini)
-                        .tint(Color.secondary)
-                        .transition(.spinnerBadgeAppearance)
-                }
-            }
-            .frame(width: 44, height: 44)
-            .font(.caption2)
+        Button(
+            isTesting ? "Testing group latency" : "Test group latency",
+            systemImage: iconName,
+            action: action
+        )
+            .labelStyle(.iconOnly)
+            .symbolEffect(.rotate, options: .repeat(.continuous), isActive: isTesting)
+            .imageScale(.large)
+            .buttonStyle(.plain)
             .contentShape(.rect)
-            .animation(.spinnerBadgeAppearance, value: isTesting)
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(.secondary)
-        .disabled(isTesting)
-        .accessibilityLabel(isTesting ? "Testing node speed" : "Test node speed")
+            .foregroundStyle(.secondary)
+            .disabled(isTesting)
+            .accessibilityLabel(isTesting ? "Testing group latency" : "Test group latency")
+    }
+
+    private var iconName: String {
+        isTesting ? "arrow.triangle.2.circlepath" : "speedometer"
     }
 }
 
@@ -147,6 +177,9 @@ struct ProxyGroupSection: View {
     @State private var isExpanded = false
     var group: ProxyItem
     var proxyColumns: [GridItem]
+    var showsLatency: Bool
+    var canRefresh: Bool
+    var refresh: () -> Void
 
     var body: some View {
         Section {
@@ -157,7 +190,8 @@ struct ProxyGroupSection: View {
                             ProxyChoiceButton(
                                 name: proxyName,
                                 proxy: app.proxyItem(named: proxyName),
-                                isSelected: proxyName == group.now
+                                isSelected: proxyName == group.now,
+                                showsLatency: showsLatency
                             ) {
                                 Task { await app.selectProxy(group: group.name, proxy: proxyName) }
                             }
@@ -172,10 +206,28 @@ struct ProxyGroupSection: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(verbatim: group.displayName)
                             .font(.headline)
-                        Text("\(group.type) · \(group.all.count) nodes")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        HStack(spacing: 6) {
+                            Text("\(group.type) · \(group.all.count) nodes")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            if showsLatency {
+                                ProxyDelayBadge(delay: group.delay)
+                            }
+                        }
                     }
+                }
+            }
+            .contextMenu {
+                if canRefresh {
+                    Button("Refresh Group", systemImage: "arrow.clockwise", action: refresh)
+                }
+            }
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                if canRefresh {
+                    Button(action: refresh) {
+                        Label("Refresh", systemImage: "arrow.clockwise")
+                    }
+                    .tint(.blue)
                 }
             }
             .onAppear {
@@ -232,6 +284,7 @@ struct ProxyChoiceButton: View {
     var name: String
     var proxy: ProxyItem?
     var isSelected: Bool
+    var showsLatency: Bool
     var action: () -> Void
 
     var body: some View {
@@ -255,7 +308,9 @@ struct ProxyChoiceButton: View {
                     HStack(spacing: 6) {
                         ProxyMetaLine(proxy: proxy)
                         Spacer(minLength: 0)
-                        ProxyDelayBadge(delay: proxy.delay)
+                        if showsLatency {
+                            ProxyDelayBadge(delay: proxy.delay)
+                        }
                     }
                 }
             }
@@ -270,6 +325,17 @@ struct ProxyChoiceButton: View {
         .buttonStyle(.plain)
         .accessibilityLabel(
             "\(proxy?.displayName ?? name.backendNameForDisplay)\(isSelected ? ", selected" : "")")
+    }
+}
+
+private struct ProxyGroupRefreshAlert: Identifiable {
+    var id = UUID()
+    var groupName: String
+    var message: String
+
+    init(report: ProxyGroupRefreshReport) {
+        self.groupName = report.groupName
+        self.message = report.message
     }
 }
 

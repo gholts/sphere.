@@ -122,6 +122,11 @@ nonisolated struct DelayHistory: Codable, Equatable, Sendable {
     var delay: Int?
 }
 
+nonisolated struct ProxyGroupRefreshReport: Equatable, Sendable {
+    var groupName: String
+    var message: String
+}
+
 nonisolated struct ProxyCollection: Codable, Equatable, Sendable {
     var proxies: [ProxyItem]
     var groups: [ProxyItem]

@@ -3,6 +3,7 @@ import Foundation
 nonisolated enum BackendKind: String, Codable, CaseIterable, Identifiable, Sendable {
     case mihomo
     case singbox
+    case surge
 
     var id: String { rawValue }
 
@@ -12,15 +13,34 @@ nonisolated enum BackendKind: String, Codable, CaseIterable, Identifiable, Senda
             return "Mihomo"
         case .singbox:
             return "Singbox"
+        case .surge:
+            return "Surge"
         }
     }
 
     var isImplemented: Bool {
-        self == .mihomo || self == .singbox
+        self == .mihomo || self == .singbox || self == .surge
     }
 
     var showsProxyProviders: Bool {
         self == .mihomo
+    }
+
+    var supportsProxyLatencyTesting: Bool {
+        self == .mihomo || self == .singbox
+    }
+
+    var supportsProxyGroupRefresh: Bool {
+        self == .surge
+    }
+
+    var defaultBaseURL: String {
+        switch self {
+        case .mihomo, .singbox:
+            return "http://127.0.0.1:9090"
+        case .surge:
+            return "https://127.0.0.1:6171"
+        }
     }
 
     static func detected(fromVersion version: String) -> Self? {
@@ -28,6 +48,9 @@ nonisolated enum BackendKind: String, Codable, CaseIterable, Identifiable, Senda
         guard !lowercased.isEmpty else { return nil }
         if lowercased.contains("sing-box") || lowercased.contains("singbox") {
             return .singbox
+        }
+        if lowercased.contains("surge") {
+            return .surge
         }
         if lowercased.contains("mihomo") || lowercased.contains("meta")
             || lowercased.contains("clash") {

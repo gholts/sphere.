@@ -44,12 +44,18 @@ struct ConnectionsView: View {
     }
 
     private var liveMetrics: [StatMetric] {
-        [
-            StatMetric(title: "Active", value: "\(live.connections.connections.count)"),
-            StatMetric(title: "Uploaded", value: ByteFormat.bytes(live.connections.uploadTotal)),
-            StatMetric(
-                title: "Downloaded", value: ByteFormat.bytes(live.connections.downloadTotal)),
+        var metrics = [
+            StatMetric(title: "Active", value: "\(live.connections.connections.count)")
         ]
+        if app.selectedProfile?.kind != .surge {
+            metrics.append(
+                StatMetric(title: "Uploaded", value: ByteFormat.bytes(live.connections.uploadTotal))
+            )
+            metrics.append(
+                StatMetric(
+                    title: "Downloaded", value: ByteFormat.bytes(live.connections.downloadTotal)))
+        }
+        return metrics
     }
 
     private var sourceIPs: [String] {
@@ -70,8 +76,10 @@ struct ConnectionsSheetView: View {
         NavigationStack {
             List {
                 Section("Filters") {
-                    TextField("Source IP / Tag", text: $filter.sourceIP)
-                        .textInputAutocapitalization(.never)
+                    ConnectionSourceFilterMenu(
+                        selection: $filter.sourceIP,
+                        options: sourceIPFilterOptions
+                    )
                     TextField("Outbound / Rule", text: $filter.outbound)
                         .textInputAutocapitalization(.never)
                     Stepper(value: $filter.minimumDownloadBytes, in: 0...1_000_000_000, step: 1024) {
@@ -97,6 +105,7 @@ struct ConnectionsSheetView: View {
                             ConnectionRow(
                                 connection: connection,
                                 sourceIPTag: app.sourceIPTag(for: connection.metadata.sourceIP),
+                                backendKind: app.selectedProfile?.kind,
                                 proxyGroups: selectableProxyGroups(for: connection),
                                 proxyItem: app.proxyItem(named:),
                                 selectProxy: selectProxy(group:proxy:)
@@ -178,6 +187,23 @@ struct ConnectionsSheetView: View {
         }
     }
 
+    private var sourceIPFilterOptions: [ConnectionSourceFilterOption] {
+        let sourceIPs = app.currentSourceIPs(from: live.connections.connections)
+        let sourceIPOptions = sourceIPs.map { sourceIP in
+            if let tag = app.sourceIPTag(for: sourceIP) {
+                return ConnectionSourceFilterOption(title: tag.backendNameForDisplay, value: tag)
+            }
+            return ConnectionSourceFilterOption(title: sourceIP, value: sourceIP)
+        }
+        let tagOptions = app.sourceIPTags.map { tag in
+            ConnectionSourceFilterOption(
+                title: tag.tag.backendNameForDisplay,
+                value: tag.tag
+            )
+        }
+        return (tagOptions + sourceIPOptions).stableUniqueSourceFilterOptions
+    }
+
     private var orderedConnections: [ConnectionInfo] {
         let connections = live.connections.connections
         guard !autoReorder else { return connections }
@@ -222,17 +248,38 @@ struct AutoReorderTitleButton: View {
             HStack(spacing: 6) {
                 Text("Connections")
                     .font(.headline)
-                Text(isOn ? "On" : "Off")
-                    .font(.caption)
-                    .foregroundStyle(isOn ? Color.accentColor : Color.secondary)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(Color.secondary.opacity(0.12), in: Capsule())
+                Image(systemName: isOn ? "stop.circle" : "play.circle")
+                    .font(.headline)
+                    .foregroundStyle(isOn ? Color.orange : Color.accentColor)
+                    .accessibilityHidden(true)
             }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Auto reorder \(isOn ? "on" : "off")")
+        .accessibilityLabel(isOn ? "Stop auto reorder" : "Start auto reorder")
         .accessibilityHint("Toggles connection auto reorder")
+    }
+}
+
+struct ConnectionSourceFilterOption: Identifiable, Hashable {
+    var id: String { value }
+    var title: String
+    var value: String
+}
+
+struct ConnectionSourceFilterMenu: View {
+    @Binding var selection: String
+    var options: [ConnectionSourceFilterOption]
+
+    var body: some View {
+        Picker("Source IP / Tag", selection: $selection) {
+            Text("All")
+                .tag("")
+            ForEach(options) { option in
+                Text(verbatim: option.title)
+                    .tag(option.value)
+            }
+        }
+        .disabled(options.isEmpty)
     }
 }
 
@@ -252,6 +299,7 @@ struct ConnectionsSectionHeader: View {
 struct ConnectionRow: View {
     var connection: ConnectionInfo
     var sourceIPTag: String?
+    var backendKind: BackendKind?
     var proxyGroups: [ProxyItem]
     var proxyItem: (String) -> ProxyItem?
     var selectProxy: (String, String) -> Void
@@ -279,7 +327,7 @@ struct ConnectionRow: View {
                 )
             }
 
-            ConnectionTrafficLine(connection: connection)
+            ConnectionTrafficLine(connection: connection, backendKind: backendKind)
         }
         .padding(.vertical, 3)
     }
@@ -531,22 +579,37 @@ struct ConnectionProxySelector: View {
 
 struct ConnectionTrafficLine: View {
     var connection: ConnectionInfo
+    var backendKind: BackendKind?
 
+    @ViewBuilder
     var body: some View {
-        HStack(spacing: 12) {
-            ConnectionIconText(systemImage: "arrow.up", title: ByteFormat.bytes(connection.upload))
-            ConnectionIconText(systemImage: "arrow.down", title: ByteFormat.bytes(connection.download))
+        if backendKind == .surge {
             if let rule = normalizedRule {
-                ConnectionIconText(systemImage: "flag", title: rule.backendNameForDisplay)
+                connectionRule(rule)
             }
+        } else {
+            HStack(spacing: 12) {
+                ConnectionIconText(systemImage: "arrow.up", title: ByteFormat.bytes(connection.upload))
+                ConnectionIconText(
+                    systemImage: "arrow.down", title: ByteFormat.bytes(connection.download))
+                if let rule = normalizedRule {
+                    connectionRule(rule)
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
-        .font(.caption)
-        .foregroundStyle(.secondary)
     }
 
     private var normalizedRule: String? {
         let rule = connection.rule?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return rule.isEmpty ? nil : rule
+    }
+
+    private func connectionRule(_ rule: String) -> some View {
+        ConnectionIconText(systemImage: "flag", title: rule.backendNameForDisplay)
+            .font(.caption)
+            .foregroundStyle(.secondary)
     }
 }
 
@@ -560,6 +623,18 @@ struct ConnectionIconText: View {
                 .accessibilityHidden(true)
             Text(verbatim: title)
                 .lineLimit(1)
+        }
+    }
+}
+
+private extension Array where Element == ConnectionSourceFilterOption {
+    var stableUniqueSourceFilterOptions: [ConnectionSourceFilterOption] {
+        var seen: Set<String> = []
+        return filter { option in
+            guard !option.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                return false
+            }
+            return seen.insert(option.value).inserted
         }
     }
 }

@@ -9,6 +9,8 @@ struct ProfileWizardView: View {
     @State private var secret: String
     @State private var testResult: ProfileTestResult?
     @State private var isTesting = false
+    @State private var testTask: Task<Void, Never>?
+    @State private var testGeneration = 0
     private let minimumTestingIndicatorDuration: TimeInterval = 0.35
     private let editingProfile: APIProfile?
     private let profileID: UUID
@@ -34,6 +36,11 @@ struct ProfileWizardView: View {
                             Text(kind.title).tag(kind)
                         }
                     }
+                    .onChange(of: kind) { oldKind, newKind in
+                        if baseURL == oldKind.defaultBaseURL {
+                            baseURL = newKind.defaultBaseURL
+                        }
+                    }
                     TextField("Controller URL", text: $baseURL)
                         .textInputAutocapitalization(.never)
                         .textContentType(.URL)
@@ -50,7 +57,7 @@ struct ProfileWizardView: View {
                     }
 
                     Button {
-                        Task { await test() }
+                        restartTest()
                     } label: {
                         HStack(spacing: 8) {
                             DisabledAwareActionLabel(
@@ -70,7 +77,6 @@ struct ProfileWizardView: View {
                         .animation(.spinnerBadgeAppearance, value: isTesting)
                     }
                     .disabled(!canTestConnection)
-                    .allowsHitTesting(!isTesting)
 
                     Button {
                         saveProfile()
@@ -100,10 +106,14 @@ struct ProfileWizardView: View {
                 if canDismiss {
                     ToolbarItem(placement: .topBarLeading) {
                         Button("Cancel") {
+                            cancelTest()
                             dismiss()
                         }
                     }
                 }
+            }
+            .onDisappear {
+                cancelTest()
             }
         }
     }
@@ -136,25 +146,44 @@ struct ProfileWizardView: View {
         editingProfile == nil ? "Save Profile" : "Save Changes"
     }
 
-    func test() async {
-        guard !isTesting else { return }
-        let startedAt = Date()
-        isTesting = true
-        let nextResult: ProfileTestResult
+    private func restartTest() {
+        testTask?.cancel()
+        testGeneration &+= 1
+        let generation = testGeneration
         let testedProfile = profile
+        testResult = nil
+        isTesting = true
+        testTask = Task {
+            await test(testedProfile, generation: generation)
+        }
+    }
+
+    private func cancelTest() {
+        testTask?.cancel()
+        testTask = nil
+        isTesting = false
+    }
+
+    private func test(_ testedProfile: APIProfile, generation: Int) async {
+        let startedAt = Date()
+        let nextResult: ProfileTestResult
         do {
             let overview = try await app.testProfile(testedProfile)
+            guard !Task.isCancelled else { return }
             let detectedKind = CoreVersionDisplay.resolvedKind(
                 for: overview.version, fallback: testedProfile.kind)
             kind = detectedKind
             nextResult = .success(
                 CoreVersionDisplay.successMessage(for: overview.version, kind: detectedKind))
         } catch {
+            guard !Task.isCancelled else { return }
             nextResult = .failure(error.localizedDescription)
         }
         await waitForMinimumTestingIndicatorDuration(since: startedAt)
+        guard generation == testGeneration, !Task.isCancelled else { return }
         testResult = nextResult
         isTesting = false
+        testTask = nil
     }
 
     private func waitForMinimumTestingIndicatorDuration(since startedAt: Date) async {
@@ -212,7 +241,7 @@ private struct ProfileTestResult: Equatable {
 }
 
 enum CoreVersionDisplay {
-    private static let coreNameTokens = ["mihomo", "sing-box", "singbox", "clash"]
+    private static let coreNameTokens = ["mihomo", "sing-box", "singbox", "clash", "surge"]
 
     static func successMessage(for version: String, kind: BackendKind) -> String {
         "OK: \(coreAndVersion(for: version, kind: kind))"

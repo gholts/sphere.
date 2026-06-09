@@ -32,7 +32,7 @@ final class ProxyStore {
 
     func isProxyGroupExpanded(_ groupName: String, profileID: UUID?) -> Bool {
         let key = proxyGroupExpandedKey(groupName, profileID: profileID)
-        guard let stored = defaults.object(forKey: key) as? Bool else { return true }
+        guard let stored = defaults.object(forKey: key) as? Bool else { return false }
         return stored
     }
 

@@ -19,12 +19,23 @@ nonisolated struct BackendTransport: Sendable {
     }
 
     static func makeSession() -> URLSession {
+        makeSession(acceptsUntrustedServerCertificates: false)
+    }
+
+    static func makeSession(acceptsUntrustedServerCertificates: Bool) -> URLSession {
         let configuration = URLSessionConfiguration.default
         configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
         configuration.urlCache = nil
         configuration.timeoutIntervalForRequest = defaultRequestTimeout
         configuration.timeoutIntervalForResource = defaultResourceTimeout
         configuration.waitsForConnectivity = false
+        if acceptsUntrustedServerCertificates {
+            return URLSession(
+                configuration: configuration,
+                delegate: BackendServerTrustDelegate(),
+                delegateQueue: nil
+            )
+        }
         return URLSession(configuration: configuration)
     }
 
@@ -37,6 +48,25 @@ nonisolated struct BackendTransport: Sendable {
             profile: profile,
             path: path,
             query: query,
+            timeoutInterval: requestTimeout
+        )
+        let data = try await data(for: request)
+        return try JSONDecoder().decode(T.self, from: data)
+    }
+
+    func request<T: Decodable>(
+        path: String,
+        query: [URLQueryItem],
+        method: String,
+        body: Data?,
+        response _: T.Type
+    ) async throws -> T {
+        let request = try URLRequestFactory.request(
+            profile: profile,
+            path: path,
+            query: query,
+            method: method,
+            body: body,
             timeoutInterval: requestTimeout
         )
         let data = try await data(for: request)
@@ -58,6 +88,23 @@ nonisolated struct BackendTransport: Sendable {
             timeoutInterval: requestTimeout
         )
         _ = try await data(for: request)
+    }
+
+    func rawData(
+        path: String,
+        query: [URLQueryItem],
+        method: String,
+        body: Data?
+    ) async throws -> Data {
+        let request = try URLRequestFactory.request(
+            profile: profile,
+            path: path,
+            query: query,
+            method: method,
+            body: body,
+            timeoutInterval: requestTimeout
+        )
+        return try await data(for: request)
     }
 
     func webSocketStream<T: Decodable & Sendable>(
@@ -148,5 +195,23 @@ nonisolated struct BackendTransport: Sendable {
         }
         request.url = webSocketURL
         return request
+    }
+}
+
+nonisolated private final class BackendServerTrustDelegate: NSObject, URLSessionDelegate, Sendable {
+    nonisolated func urlSession(
+        _: URLSession,
+        didReceive challenge: URLAuthenticationChallenge,
+        completionHandler: @Sendable (
+            URLSession.AuthChallengeDisposition, URLCredential?
+        ) -> Void
+    ) {
+        guard challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
+            let trust = challenge.protectionSpace.serverTrust
+        else {
+            completionHandler(.performDefaultHandling, nil)
+            return
+        }
+        completionHandler(.useCredential, URLCredential(trust: trust))
     }
 }

@@ -19,6 +19,13 @@ nonisolated struct BackendConfigField: Identifiable, Equatable, Sendable {
         self.path = path.split(separator: ".").map(String.init)
         self.control = control
     }
+
+    init(section: String, title: String, path: [String], control: BackendConfigControl) {
+        self.section = section
+        self.title = title
+        self.path = path
+        self.control = control
+    }
 }
 
 nonisolated enum BackendConfigControl: Equatable, Sendable {
@@ -88,7 +95,7 @@ nonisolated enum BackendConfigControl: Equatable, Sendable {
 nonisolated enum BackendConfigCatalog {
     static func sections(for kind: BackendKind?, configs: [String: JSONValue])
         -> [BackendConfigSection] {
-        let knownFields = fields(for: kind)
+        let knownFields = fields(for: kind, configs: configs)
         let visibleKnownFields = knownFields.filter { configs.value(at: $0.path) != nil }
         let order = sectionOrder(for: kind)
 
@@ -100,11 +107,20 @@ nonisolated enum BackendConfigCatalog {
     }
 
     static func fields(for kind: BackendKind?) -> [BackendConfigField] {
+        fields(for: kind, configs: [:])
+    }
+
+    private static func fields(
+        for kind: BackendKind?,
+        configs: [String: JSONValue]
+    ) -> [BackendConfigField] {
         switch kind {
         case .mihomo:
             return mihomoFields
         case .singbox:
             return singboxFields
+        case .surge:
+            return surgeFields + surgeModuleFields(configs: configs)
         case .none:
             return []
         }
@@ -132,6 +148,8 @@ nonisolated enum BackendConfigCatalog {
             ]
         case .singbox:
             return ["Clash API", "Runtime", "Access"]
+        case .surge:
+            return ["Runtime", "Features", "Modules"]
         case .none:
             return []
         }
@@ -511,6 +529,43 @@ nonisolated enum BackendConfigCatalog {
             section: "Access", title: "Allow Private Network",
             path: "access_control_allow_private_network", control: .toggle),
     ]
+
+    private static let surgeFields: [BackendConfigField] = [
+        BackendConfigField(
+            section: "Runtime", title: "Mode", path: "outbound.mode",
+            control: .picker(["rule", "proxy", "direct"])),
+        BackendConfigField(
+            section: "Runtime", title: "Global Policy", path: "outbound.global_policy",
+            control: .text),
+
+        BackendConfigField(
+            section: "Features", title: "MITM", path: "features.mitm", control: .toggle),
+        BackendConfigField(
+            section: "Features", title: "Capture", path: "features.capture", control: .toggle),
+        BackendConfigField(
+            section: "Features", title: "Rewrite", path: "features.rewrite", control: .toggle),
+        BackendConfigField(
+            section: "Features", title: "Scripting", path: "features.scripting",
+            control: .toggle),
+        BackendConfigField(
+            section: "Features", title: "System Proxy", path: "features.system_proxy",
+            control: .toggle),
+        BackendConfigField(
+            section: "Features", title: "Enhanced Mode", path: "features.enhanced_mode",
+            control: .toggle),
+    ]
+
+    private static func surgeModuleFields(configs: [String: JSONValue]) -> [BackendConfigField] {
+        guard case .object(let modules)? = configs["modules"] else { return [] }
+        return modules.keys.sorted().map { module in
+            BackendConfigField(
+                section: "Modules",
+                title: module,
+                path: ["modules", module],
+                control: .toggle
+            )
+        }
+    }
 }
 
 extension JSONValue {

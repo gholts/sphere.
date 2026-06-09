@@ -138,6 +138,10 @@ nonisolated struct MihomoClient: ProxyBackendClient {
         )
     }
 
+    func refreshProxyGroup(_: String) throws -> ProxyGroupRefreshReport {
+        throw BackendError.unsupportedBackend(profile.kind.title)
+    }
+
     func proxyProviders() async throws -> [ProxyProvider] {
         try await transport.request(
             path: "/providers/proxies",

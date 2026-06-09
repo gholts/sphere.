@@ -18,6 +18,7 @@ extension AppModel {
     }
 
     func streamMemory() async {
+        guard selectedProfile?.kind != .surge else { return }
         guard let client else { return }
         defer { flushPendingCacheSave() }
         do {

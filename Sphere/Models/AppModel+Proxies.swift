@@ -20,8 +20,27 @@ extension AppModel {
         }
     }
 
+    func refreshProxyGroup(_ groupName: String) async -> ProxyGroupRefreshReport {
+        guard let client else {
+            return ProxyGroupRefreshReport(groupName: groupName, message: "No backend connected.")
+        }
+        do {
+            let report = try await client.refreshProxyGroup(groupName)
+            let collection = try await client.proxies()
+            if setProxyCollection(collection) {
+                saveCachedDataIfUseful()
+            }
+            markBackendConnected()
+            return report
+        } catch {
+            beginBackendErrorDebounce(error.localizedDescription)
+            return ProxyGroupRefreshReport(groupName: groupName, message: error.localizedDescription)
+        }
+    }
+
     func testProxyGroupDelays() async {
         guard let client, !isTestingProxyGroupDelays else { return }
+        guard selectedProfile?.kind.supportsProxyLatencyTesting == true else { return }
         let groupNames = proxyCollection.groups.map(\.name)
         guard !groupNames.isEmpty else { return }
 
@@ -56,7 +75,7 @@ extension AppModel {
             let proxyRefresh = await result { try await client.proxies() }
             switch proxyRefresh {
             case .success(let collection):
-                didChange = setProxyCollection(collection) || didChange
+                didChange = setProxyCollection(collection.applyingDelayResults(delays)) || didChange
             case .failure(let error):
                 if delays.isEmpty {
                     throw error
