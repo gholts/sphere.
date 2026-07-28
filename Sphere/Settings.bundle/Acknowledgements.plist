@@ -8,6 +8,32 @@
 			<key>Type</key>
 			<string>PSGroupSpecifier</string>
 			<key>Title</key>
+			<string>sphere</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSTitleValueSpecifier</string>
+			<key>Title</key>
+			<string>License</string>
+			<key>Key</key>
+			<string>sphere.settings.sphereLicense</string>
+			<key>DefaultValue</key>
+			<string>GNU General Public License v3.0</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSTitleValueSpecifier</string>
+			<key>Title</key>
+			<string>Copyright</string>
+			<key>Key</key>
+			<string>sphere.settings.sphereCopyright</string>
+			<key>DefaultValue</key>
+			<string>Hugo Lee</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSGroupSpecifier</string>
+			<key>Title</key>
 			<string>Application Icon Illustration</string>
 			<key>FooterText</key>
 			<string>App icon illustrations include assets licensed under Creative Commons Attribution 4.0 International (CC BY 4.0). You are free to share and adapt the material with appropriate attribution. Source and author information should be retained with the project records.</string>
@@ -38,7 +64,7 @@
 			<key>Title</key>
 			<string>Zashboard Reference</string>
 			<key>FooterText</key>
-			<string>This app references the Zashboard project, which is licensed under the MIT License. Copyright and license notices are retained as required by the MIT License.</string>
+			<string>Referenced for Mihomo API usage. Licensed under the MIT License.</string>
 		</dict>
 		<dict>
 			<key>Type</key>
@@ -52,18 +78,26 @@
 		</dict>
 		<dict>
 			<key>Type</key>
+			<string>PSGroupSpecifier</string>
+			<key>Title</key>
+			<string>Surge Web Dashboard (formerly YASD) Reference</string>
+			<key>FooterText</key>
+			<string>Referenced for Surge HTTP API usage. Licensed under the MIT License.</string>
+		</dict>
+		<dict>
+			<key>Type</key>
 			<string>PSTitleValueSpecifier</string>
 			<key>Title</key>
-			<string>Project</string>
+			<string>License</string>
 			<key>Key</key>
-			<string>sphere.settings.zashboardProject</string>
+			<string>sphere.settings.yasdLicense</string>
 			<key>DefaultValue</key>
-			<string>Zashboard</string>
+			<string>MIT License</string>
 		</dict>
 	</array>
 	<key>StringsTable</key>
-	<string>Licenses</string>
+	<string>Acknowledgements</string>
 	<key>Title</key>
-	<string>Licenses</string>
+	<string>Acknowledgements</string>
 </dict>
 </plist>

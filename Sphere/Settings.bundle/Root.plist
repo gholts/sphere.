@@ -8,9 +8,9 @@
 			<key>Type</key>
 			<string>PSChildPaneSpecifier</string>
 			<key>Title</key>
-			<string>License</string>
+			<string>Acknowledgements</string>
 			<key>File</key>
-			<string>License</string>
+			<string>Acknowledgements</string>
 		</dict>
 		<dict>
 			<key>Type</key>
@@ -19,8 +19,6 @@
 			<string>Version</string>
 			<key>Key</key>
 			<string>sphere.settings.version</string>
-			<key>DefaultValue</key>
-			<string>1.0</string>
 		</dict>
 	</array>
 	<key>StringsTable</key>
