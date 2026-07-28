@@ -10,15 +10,18 @@ extension AppModel {
                 markBackendConnected()
                 updateConnections(snapshot)
             }
-        } catch  where error.isCancellation || Task.isCancelled {
+        } catch where error.isCancellation || Task.isCancelled {
             return
         } catch {
-            await pollConnections(client: client)
+            await pollBackend(every: .seconds(1)) {
+                try await client.connections()
+            } apply: {
+                updateConnections($0)
+            }
         }
     }
 
     func streamMemory() async {
-        guard selectedProfile?.kind != .surge else { return }
         guard let client else { return }
         defer { flushPendingCacheSave() }
         do {
@@ -28,10 +31,10 @@ extension AppModel {
                     updateMemory(inuse)
                 }
             }
-        } catch  where error.isCancellation || Task.isCancelled {
+        } catch where error.isCancellation || Task.isCancelled {
             return
         } catch {
-            await pollOverviewStats(client: client)
+            await pollOverview(client: client)
         }
     }
 
@@ -43,10 +46,29 @@ extension AppModel {
                 markBackendConnected()
                 updateTraffic(upload: snapshot.up, download: snapshot.down)
             }
-        } catch  where error.isCancellation || Task.isCancelled {
+        } catch where error.isCancellation || Task.isCancelled {
             return
         } catch {
-            await pollOverviewStats(client: client)
+            await pollOverview(client: client)
+        }
+    }
+
+    func streamDevices() async {
+        guard selectedProfile?.kind.supportsDeviceManagement == true, let client else {
+            return
+        }
+        do {
+            for try await devices in client.deviceEvents(interval: 2000) {
+                markBackendConnected()
+                updateDevices(devices)
+            }
+        } catch where error.isCancellation || Task.isCancelled {
+            return
+        } catch {
+            beginBackendErrorDebounce(error.localizedDescription)
+            if error.isConnectionFailure {
+                suspendBackgroundRefresh()
+            }
         }
     }
 
@@ -61,39 +83,32 @@ extension AppModel {
                     liveState.logs.removeFirst(liveState.logs.count - 400)
                 }
             }
-        } catch  where error.isCancellation || Task.isCancelled {
+        } catch where error.isCancellation || Task.isCancelled {
             return
         } catch {
             beginBackendErrorDebounce(error.localizedDescription)
         }
     }
 
-    private func pollConnections(client: any ProxyBackendClient) async {
-        while !Task.isCancelled {
-            do {
-                updateConnections(try await client.connections())
-                markBackendConnected()
-                try await Task.sleep(for: .seconds(1))
-            } catch  where error.isCancellation || Task.isCancelled {
-                return
-            } catch {
-                beginBackendErrorDebounce(error.localizedDescription)
-                if error.isConnectionFailure {
-                    suspendBackgroundRefresh()
-                    return
-                }
-                try? await Task.sleep(for: .seconds(2))
-            }
+    private func pollOverview(client: any ProxyBackendClient) async {
+        await pollBackend(every: .seconds(1)) {
+            try await client.overview()
+        } apply: {
+            applyOverviewStats($0)
         }
     }
 
-    private func pollOverviewStats(client: any ProxyBackendClient) async {
+    private func pollBackend<Value: Sendable>(
+        every interval: Duration,
+        operation: () async throws -> Value,
+        apply: (Value) -> Void
+    ) async {
         while !Task.isCancelled {
             do {
-                applyOverviewStats(try await client.overview())
+                apply(try await operation())
                 markBackendConnected()
-                try await Task.sleep(for: .seconds(1))
-            } catch  where error.isCancellation || Task.isCancelled {
+                try await Task.sleep(for: interval)
+            } catch where error.isCancellation || Task.isCancelled {
                 return
             } catch {
                 beginBackendErrorDebounce(error.localizedDescription)

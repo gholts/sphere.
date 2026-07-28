@@ -117,20 +117,20 @@ nonisolated struct ConnectionFilter: Equatable, Sendable {
     }
 
     func matches(_ connection: ConnectionInfo) -> Bool {
-        matches(connection, sourceIPTag: nil)
+        matches(connection, sourceName: nil)
     }
 
-    func matches(_ connection: ConnectionInfo, sourceIPTag: String?) -> Bool {
+    func matches(_ connection: ConnectionInfo, sourceName: String?) -> Bool {
         let trimmedQuery = query.trimmedConnectionValue
         let queryMatches =
             trimmedQuery.isEmpty
-            || searchableValues(for: connection, sourceIPTag: sourceIPTag).contains {
+            || searchableValues(for: connection, sourceName: sourceName).contains {
                 $0.localizedStandardContains(trimmedQuery)
             }
         let trimmedSourceIP = sourceIP.trimmedConnectionValue
         let sourceMatches =
             trimmedSourceIP.isEmpty
-            || [connection.metadata.sourceIP, sourceIPTag].compactMap(\.nonEmptyConnectionValue)
+            || [connection.metadata.sourceIP, sourceName].compactMap(\.nonEmptyConnectionValue)
                 .contains {
                     $0.localizedStandardContains(trimmedSourceIP)
                 }
@@ -145,9 +145,9 @@ nonisolated struct ConnectionFilter: Equatable, Sendable {
             && connection.download >= minimumDownloadBytes
     }
 
-    private func searchableValues(for connection: ConnectionInfo, sourceIPTag: String?) -> [String] {
-        if let normalizedSourceIPTag = sourceIPTag.nonEmptyConnectionValue {
-            return connection.searchableValues + [normalizedSourceIPTag]
+    private func searchableValues(for connection: ConnectionInfo, sourceName: String?) -> [String] {
+        if let normalizedSourceName = sourceName.nonEmptyConnectionValue {
+            return connection.searchableValues + [normalizedSourceName]
         }
         return connection.searchableValues
     }

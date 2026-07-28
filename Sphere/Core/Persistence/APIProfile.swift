@@ -27,11 +27,19 @@ nonisolated enum BackendKind: String, Codable, CaseIterable, Identifiable, Senda
     }
 
     var supportsProxyLatencyTesting: Bool {
-        self == .mihomo || self == .singbox
+        self == .mihomo || self == .singbox || self == .surge
     }
 
     var supportsProxyGroupRefresh: Bool {
         self == .surge
+    }
+
+    var supportsDeviceManagement: Bool {
+        self == .surge
+    }
+
+    var supportsSourceIPTags: Bool {
+        self == .mihomo || self == .singbox
     }
 
     var defaultBaseURL: String {

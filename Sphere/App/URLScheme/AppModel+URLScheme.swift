@@ -56,7 +56,7 @@ extension AppModel {
         case .testProxyGroupDelays:
             try requireSelectedProfileKind(
                 selectedProfile?.kind.supportsProxyLatencyTesting == true,
-                message: "Proxy latency test requires Mihomo or Singbox profile.")
+                message: "Proxy latency test requires Mihomo, Singbox, or Surge profile.")
             await testProxyGroupDelays()
         case let .setProxyGroupExpansion(group, expanded):
             setProxyGroupExpansionFromURL(group: group, expanded: expanded)
@@ -65,7 +65,9 @@ extension AppModel {
         case .closeAllConnections:
             await closeAllConnections()
         case let .setSourceIPTag(sourceIP, tag):
-            if let tag {
+            if selectedProfile?.kind.supportsDeviceManagement == true {
+                await renameSurgeDevice(sourceAddress: sourceIP, name: tag ?? "")
+            } else if let tag {
                 setSourceIPTag(tag, for: sourceIP)
             } else {
                 removeSourceIPTag(for: sourceIP)
@@ -82,12 +84,17 @@ extension AppModel {
             try requireSelectedProfileKind(
                 selectedProfile?.kind == .surge,
                 message: "MITM certificate download requires Surge profile.")
-            _ = await downloadSurgeMITMCertificate()
+            navigate(to: .surgeMITMCertificate)
         case let .setSurgeFeature(feature, enabled):
             try requireSelectedProfileKind(
                 selectedProfile?.kind == .surge,
                 message: "Surge feature updates require Surge profile.")
             await patchConfigFromURL(.path(["features", feature.configKey], value: enabled ? "true" : "false"))
+        case .updateSurgeDevice(let update):
+            try requireSelectedProfileKind(
+                selectedProfile?.kind == .surge,
+                message: "Device updates require a Surge profile.")
+            await updateDevice(update)
         }
     }
 

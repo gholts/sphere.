@@ -20,7 +20,7 @@ struct ProxiesView: View {
                 if app.proxyCollection.groups.isEmpty {
                     EmptyStateView(
                         title: "No Proxy Groups", message: "Refresh after backend connects.",
-                        systemImage: "point.3.connected.trianglepath.dotted"
+                        systemImage: "filemenu.and.selection"
                     )
                     .listRowBackground(Color.clear)
                 } else {
@@ -71,18 +71,17 @@ struct ProxiesView: View {
                     }
                 }
             }
-            .backendPageToolbar(tab: .proxies)
+            .backendPageToolbar(
+                tab: .proxies,
+                showsAdditionalTrailingAction:
+                    showsProxyLatency && !app.proxyCollection.groups.isEmpty
+            ) {
+                ProxyGroupSpeedTestButton(isTesting: app.isTestingProxyGroupDelays) {
+                    Task { await app.testProxyGroupDelays() }
+                }
+            }
             .refreshable {
                 await app.refreshProxies(source: .pullToRefresh)
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    if showsProxyLatency, !app.proxyCollection.groups.isEmpty {
-                        ProxyGroupSpeedTestButton(isTesting: app.isTestingProxyGroupDelays) {
-                            Task { await app.testProxyGroupDelays() }
-                        }
-                    }
-                }
             }
             .alert(item: $proxyGroupRefreshAlert) { alert in
                 Alert(
@@ -154,21 +153,12 @@ struct ProxyGroupSpeedTestButton: View {
     var body: some View {
         Button(
             isTesting ? "Testing group latency" : "Test group latency",
-            systemImage: iconName,
+            systemImage: isTesting ? "arrow.triangle.2.circlepath" : "speedometer",
             action: action
         )
-            .labelStyle(.iconOnly)
-            .symbolEffect(.rotate, options: .repeat(.continuous), isActive: isTesting)
-            .imageScale(.large)
-            .buttonStyle(.plain)
-            .contentShape(.rect)
-            .foregroundStyle(.secondary)
-            .disabled(isTesting)
-            .accessibilityLabel(isTesting ? "Testing group latency" : "Test group latency")
-    }
-
-    private var iconName: String {
-        isTesting ? "arrow.triangle.2.circlepath" : "speedometer"
+        .labelStyle(.iconOnly)
+        .symbolEffect(.rotate, options: .repeat(.continuous), isActive: isTesting)
+        .disabled(isTesting)
     }
 }
 
@@ -184,22 +174,25 @@ struct ProxyGroupSection: View {
     var body: some View {
         Section {
             DisclosureGroup(isExpanded: $isExpanded) {
-                if isExpanded {
-                    LazyVGrid(columns: proxyColumns, spacing: 8) {
-                        ForEach(group.all, id: \.self) { proxyName in
-                            ProxyChoiceButton(
-                                name: proxyName,
-                                proxy: app.proxyItem(named: proxyName),
-                                isSelected: proxyName == group.now,
-                                showsLatency: showsLatency
-                            ) {
-                                Task { await app.selectProxy(group: group.name, proxy: proxyName) }
+                LazyVGrid(columns: proxyColumns, spacing: 8) {
+                    ForEach(group.all, id: \.self) { proxyName in
+                        ProxyChoiceButton(
+                            name: proxyName,
+                            proxy: app.proxyItem(named: proxyName),
+                            isSelected: proxyName == group.now,
+                            showsLatency: showsLatency
+                        ) {
+                            Task {
+                                await app.selectProxy(
+                                    group: group.name,
+                                    proxy: proxyName
+                                )
                             }
                         }
                     }
-                    .padding(.leading, -20)
-                    .padding(-5)
                 }
+                .padding(.leading, -20)
+                .padding(-5)
             } label: {
                 HStack(spacing: 8) {
                     ProxyIconView(icon: group.icon, size: 18)
@@ -217,6 +210,7 @@ struct ProxyGroupSection: View {
                     }
                 }
             }
+            .tint(.secondary)
             .contextMenu {
                 if canRefresh {
                     Button("Refresh Group", systemImage: "arrow.clockwise", action: refresh)
@@ -237,7 +231,7 @@ struct ProxyGroupSection: View {
                 isExpanded = app.isProxyGroupExpanded(group.name)
             }
             .onChange(of: app.proxyGroupExpansionRevision) {
-                withAnimation(.smooth(duration: 0.28)) {
+                withAnimation {
                     isExpanded = app.isProxyGroupExpanded(group.name)
                 }
             }

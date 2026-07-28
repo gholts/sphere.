@@ -28,7 +28,7 @@ enum PreviewFixtures {
         )
         app.proxyProviders = [
             ProxyProvider(
-                name: "main", vehicleType: "HTTP", expireAt: Date().addingTimeInterval(86_400 * 30),
+                name: "main", vehicleType: "HTTP", expireAt: Date.now.addingTimeInterval(86_400 * 30),
                 usedBytes: 10 * 1024 * 1024 * 1024, totalBytes: 100 * 1024 * 1024 * 1024),
         ]
         app.rules = [

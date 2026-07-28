@@ -83,9 +83,9 @@ final class LazyProgressActivityReporter: ProgressActivityReporting {
         if let reporter {
             return reporter
         }
-        let reporter = LiveActivityProgressReporter()
-        self.reporter = reporter
-        return reporter
+        let liveReporter = LiveActivityProgressReporter()
+        reporter = liveReporter
+        return liveReporter
     }
 }
 
@@ -138,7 +138,7 @@ final class LiveActivityProgressReporter: ProgressActivityReporting {
         await activity.end(
             content,
             dismissalPolicy: .after(
-                Date().addingTimeInterval(ProgressActivityTiming.finishedDismissalDelay)))
+                Date.now.addingTimeInterval(ProgressActivityTiming.finishedDismissalDelay)))
         self.activity = nil
     }
 
@@ -161,7 +161,7 @@ final class LiveActivityProgressReporter: ProgressActivityReporting {
                 fraction: fraction,
                 status: status
             ),
-            staleDate: Date().addingTimeInterval(ProgressActivityTiming.staleInterval),
+            staleDate: Date.now.addingTimeInterval(ProgressActivityTiming.staleInterval),
             relevanceScore: 1
         )
     }

@@ -23,7 +23,6 @@ extension AppModel {
             )
             rules = try await client.rules()
             ruleProviders = try await client.ruleProviders()
-            applyConfigs(try await client.configs())
             saveCachedDataIfUseful()
         }
         if outcome.errorMessage == nil {

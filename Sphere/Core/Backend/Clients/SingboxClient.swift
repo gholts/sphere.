@@ -151,7 +151,8 @@ nonisolated struct SingboxClient: ProxyBackendClient {
             path: "/logs",
             query: [URLQueryItem(name: "level", value: level.rawValue)],
             response: LogEntry.self,
-            appendsSecretToken: true
+            appendsSecretToken: true,
+            bufferingPolicy: .bufferingNewest(400)
         )
     }
 

@@ -24,6 +24,9 @@ nonisolated protocol ProxyBackendClient: Sendable {
     func connections() async throws -> ConnectionsSnapshot
     func closeConnection(_ id: String) async throws
     func closeAllConnections() async throws
+    func devices() async throws -> [SurgeDevice]
+    func updateDevice(_ update: SurgeDevice.Update) async throws
+    func deviceEvents(interval: Int) -> AsyncThrowingStream<[SurgeDevice], Error>
     func upgradeCore(channel: CoreUpdateChannel) async throws
     func logs(level: LogLevel) -> AsyncThrowingStream<LogEntry, Error>
     func connectionEvents(interval: Int) -> AsyncThrowingStream<ConnectionsSnapshot, Error>
@@ -33,6 +36,26 @@ nonisolated protocol ProxyBackendClient: Sendable {
 }
 
 extension ProxyBackendClient {
+    func devices() async throws -> [SurgeDevice] {
+        throw BackendError.unsupportedBackend("\(profile.kind.title) device management")
+    }
+
+    func updateDevice(_: SurgeDevice.Update) async throws {
+        throw BackendError.unsupportedBackend("\(profile.kind.title) device management")
+    }
+
+    nonisolated func deviceEvents(interval _: Int) -> AsyncThrowingStream<[SurgeDevice], Error> {
+        let (stream, continuation) = AsyncThrowingStream.makeStream(
+            of: [SurgeDevice].self,
+            throwing: Error.self,
+            bufferingPolicy: .bufferingNewest(1)
+        )
+        continuation.finish(
+            throwing: BackendError.unsupportedBackend("\(profile.kind.title) device stream")
+        )
+        return stream
+    }
+
     func mitmCertificate() async throws -> Data {
         throw BackendError.unsupportedBackend(profile.kind.title)
     }
@@ -53,6 +76,16 @@ nonisolated enum BackendClientFactory {
 
 nonisolated struct UnsupportedBackendClient: ProxyBackendClient {
     var profile: APIProfile
+
+    private func unsupportedStream<Value: Sendable>()
+        -> AsyncThrowingStream<Value, Error> {
+        let (stream, continuation) =
+            AsyncThrowingStream<Value, Error>.makeStream()
+        continuation.finish(
+            throwing: BackendError.unsupportedBackend(profile.kind.title)
+        )
+        return stream
+    }
 
     func testConnection() throws -> BackendOverview {
         throw BackendError.unsupportedBackend(profile.kind.title)
@@ -113,24 +146,16 @@ nonisolated struct UnsupportedBackendClient: ProxyBackendClient {
         throw BackendError.unsupportedBackend(profile.kind.title)
     }
     func logs(level _: LogLevel) -> AsyncThrowingStream<LogEntry, Error> {
-        AsyncThrowingStream { continuation in
-            continuation.finish(throwing: BackendError.unsupportedBackend(profile.kind.title))
-        }
+        unsupportedStream()
     }
     func connectionEvents(interval _: Int) -> AsyncThrowingStream<ConnectionsSnapshot, Error> {
-        AsyncThrowingStream { continuation in
-            continuation.finish(throwing: BackendError.unsupportedBackend(profile.kind.title))
-        }
+        unsupportedStream()
     }
     func memoryEvents() -> AsyncThrowingStream<MemorySnapshot, Error> {
-        AsyncThrowingStream { continuation in
-            continuation.finish(throwing: BackendError.unsupportedBackend(profile.kind.title))
-        }
+        unsupportedStream()
     }
     func trafficEvents() -> AsyncThrowingStream<TrafficSnapshot, Error> {
-        AsyncThrowingStream { continuation in
-            continuation.finish(throwing: BackendError.unsupportedBackend(profile.kind.title))
-        }
+        unsupportedStream()
     }
 }
 
@@ -144,6 +169,7 @@ nonisolated enum BackendError: LocalizedError, Equatable, Sendable {
     case invalidBaseURL
     case invalidResponse
     case httpStatus(Int, String)
+    case api(String)
     case unsupportedBackend(String)
 
     var errorDescription: String? {
@@ -154,6 +180,8 @@ nonisolated enum BackendError: LocalizedError, Equatable, Sendable {
             return "Bad backend response"
         case let .httpStatus(status, body):
             return "HTTP \(status): \(HTTPErrorBodyDisplay.message(from: body))"
+        case .api(let message):
+            return message
         case .unsupportedBackend(let backend):
             return "\(backend) backend not implemented"
         }
@@ -231,6 +259,8 @@ nonisolated struct URLRequestFactory {
             request.httpBody = body
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         }
+        request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
+        request.setValue("*/*", forHTTPHeaderField: "Accept")
         return request
     }
 }

@@ -24,7 +24,7 @@ enum AppTab: String, CaseIterable, Identifiable, Hashable, Sendable {
     var symbol: String {
         switch self {
         case .proxies:
-            return "point.3.connected.trianglepath.dotted"
+            return "filemenu.and.selection"
         case .rule:
             return "list.bullet.rectangle"
         case .connections:

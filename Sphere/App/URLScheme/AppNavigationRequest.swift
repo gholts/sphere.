@@ -21,13 +21,14 @@ nonisolated enum AppNavigationDestination: Equatable, Sendable {
     case editProfile(UUID)
     case configEditor
     case logBook
+    case surgeMITMCertificate
     case connectionsList
 
     var targetTab: AppTab {
         switch self {
         case .tab(let tab):
             return tab
-        case .addProfile, .editProfile, .configEditor, .logBook:
+        case .addProfile, .editProfile, .configEditor, .logBook, .surgeMITMCertificate:
             return .more
         case .connectionsList:
             return .connections

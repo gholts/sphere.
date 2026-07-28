@@ -101,6 +101,7 @@ private struct VisibleRefreshLifecycle: ViewModifier {
         content
             .task(id: VisibleRefreshKey(profileID: app.selectedProfileID, tab: app.selectedTab)) {
                 await app.loadCachedDataIfNeeded()
+                guard app.selectedTab != .connections else { return }
                 await InitialRenderDelay.wait()
                 await app.refreshSelectedTab(source: .automatic)
             }
@@ -109,6 +110,7 @@ private struct VisibleRefreshLifecycle: ViewModifier {
                     profileID: app.selectedProfileID, tab: app.selectedTab,
                     suspended: app.isAutoRefreshSuspended)
             ) {
+                guard app.selectedTab == .proxies else { return }
                 await app.runAutoRefreshLoop()
             }
             .task(
@@ -136,6 +138,17 @@ private struct VisibleRefreshLifecycle: ViewModifier {
             ) {
                 guard !app.isAutoRefreshSuspended, app.selectedTab == .more else { return }
                 await app.streamTraffic()
+            }
+            .task(
+                id: LiveStreamKey(
+                    profileID: app.selectedProfileID, tab: app.selectedTab,
+                    suspended: app.isAutoRefreshSuspended, stream: .devices)
+            ) {
+                guard !app.isAutoRefreshSuspended,
+                    app.selectedTab == .connections,
+                    app.selectedProfile?.kind.supportsDeviceManagement == true
+                else { return }
+                await app.streamDevices()
             }
             .task(id: app.backendErrorDebounceRevision) {
                 await app.runBackendErrorDebounce()
@@ -165,6 +178,7 @@ private struct LiveStreamKey: Equatable {
         case connections
         case memory
         case traffic
+        case devices
     }
 
     var profileID: UUID?

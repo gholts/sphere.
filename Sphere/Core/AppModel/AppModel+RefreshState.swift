@@ -37,6 +37,27 @@ extension AppModel {
         }
     }
 
+    func captureErrors(
+        for profileID: UUID?,
+        operation: () async throws -> Void
+    ) async -> RefreshOutcome {
+        do {
+            try await operation()
+            guard selectedProfileID == profileID else { return RefreshOutcome() }
+            markBackendConnected()
+            var outcome = RefreshOutcome()
+            outcome.markBackendConnected()
+            return outcome
+        } catch {
+            guard selectedProfileID == profileID, !error.isCancellation else {
+                return RefreshOutcome()
+            }
+            let outcome = RefreshOutcome(error: error)
+            beginBackendErrorDebounce(error.localizedDescription)
+            return outcome
+        }
+    }
+
     func prepareRefresh(source: RefreshSource) {
         if source.isUserInitiated {
             manualRefreshDepth += 1

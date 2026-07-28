@@ -285,7 +285,8 @@ nonisolated struct ProxyProvider: Identifiable, Codable, Equatable, Sendable {
     }
 }
 
-nonisolated struct ProviderCollection<T: Decodable & Identifiable & Equatable>: Decodable, Equatable {
+nonisolated struct ProviderCollection<T: Decodable & Identifiable & Equatable & Sendable>:
+    Decodable, Equatable, Sendable {
     var providers: [T]
 
     enum CodingKeys: String, CodingKey {

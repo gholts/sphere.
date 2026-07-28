@@ -2,11 +2,13 @@ import SwiftUI
 
 struct RuleView: View {
     @Environment(AppModel.self) private var app
+    @State private var searchQuery = ""
     @State private var refreshingRuleSetNames: Set<String> = []
 
     var body: some View {
         NavigationStack {
             let providers = ruleProviderLookup
+            let rules = filteredRules(providers: providers)
             List {
                 Section("Rules") {
                     if app.rules.isEmpty {
@@ -15,8 +17,11 @@ struct RuleView: View {
                             systemImage: "list.bullet.rectangle"
                         )
                         .listRowBackground(Color.clear)
+                    } else if rules.isEmpty {
+                        ContentUnavailableView.search
+                            .listRowBackground(Color.clear)
                     } else {
-                        ForEach(app.rules) { rule in
+                        ForEach(rules) { rule in
                             RuleRow(
                                 rule: rule,
                                 provider: rule.isRuleSet ? providers[rule.payload] : nil,
@@ -27,6 +32,12 @@ struct RuleView: View {
                     }
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
+            .searchable(
+                text: $searchQuery,
+                placement: .navigationBarDrawer(displayMode: .always),
+                prompt: "Search rules"
+            )
             .backendPageToolbar(tab: .rule)
             .refreshable {
                 await app.refreshRules(source: .pullToRefresh)
@@ -35,7 +46,19 @@ struct RuleView: View {
     }
 
     private var ruleProviderLookup: [String: RuleProvider] {
-        Dictionary(app.ruleProviders.map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
+        Dictionary(
+            app.ruleProviders.lazy.map { ($0.name, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+    }
+
+    private func filteredRules(providers: [String: RuleProvider]) -> [RuleItem] {
+        app.rules.filter { rule in
+            rule.matches(
+                searchQuery: searchQuery,
+                provider: rule.isRuleSet ? providers[rule.payload] : nil
+            )
+        }
     }
 
     private func refreshRuleSet(_ name: String) {
@@ -43,72 +66,7 @@ struct RuleView: View {
         refreshingRuleSetNames.insert(name)
         Task {
             await app.refreshRuleProvider(name)
-            await MainActor.run {
-                _ = refreshingRuleSetNames.remove(name)
-            }
-        }
-    }
-}
-
-private struct RuleRow: View {
-    var rule: RuleItem
-    var provider: RuleProvider?
-    var isRefreshing: Bool
-    var refresh: () -> Void
-
-    var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(rule.displayTitle)
-                    .lineLimit(2)
-                RuleMetadataRow(rule: rule, provider: provider)
-            }
-            Spacer()
-            if provider?.isRemote == true {
-                Button(action: refresh) {
-                    ZStack {
-                        Image(systemName: "arrow.clockwise")
-                            .opacity(isRefreshing ? 0 : 1)
-                        if isRefreshing {
-                            unsafe ProgressView()
-                                .controlSize(.small)
-                                .transition(.opacity.combined(with: .scale(scale: 0.92)))
-                        }
-                    }
-                    .frame(width: 24, height: 24)
-                    .animation(.smooth(duration: 0.22), value: isRefreshing)
-                }
-                .buttonStyle(.borderless)
-                .disabled(isRefreshing)
-                .accessibilityLabel("Refresh \(rule.payload)")
-            }
-        }
-    }
-}
-
-private struct RuleMetadataRow: View {
-    var rule: RuleItem
-    var provider: RuleProvider?
-
-    var body: some View {
-        if rule.isMatch {
-            Text(verbatim: rule.proxy.backendNameForDisplay)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        } else {
-            HStack {
-                Text(rule.type)
-                if let provider {
-                    Text(provider.behavior ?? provider.vehicleType ?? provider.type ?? "Provider")
-                }
-                if let count = provider?.ruleCount {
-                    Text("\(count) rules")
-                }
-                Spacer()
-                Text(verbatim: rule.proxy.backendNameForDisplay)
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
+            refreshingRuleSetNames.remove(name)
         }
     }
 }

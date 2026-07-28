@@ -323,6 +323,20 @@ nonisolated struct AppURLRequest: Equatable, Sendable {
             let feature = try query.surgeFeatureValue()
             let enabled = try query.requiredBool("enabled", "value", "on")
             return .setSurgeFeature(feature, enabled: enabled)
+        case "device", "devices":
+            let handlingKeys = ["handled", "should-handle", "shouldhandledbysurge"]
+            let shouldHandledBySurge = query.bool(handlingKeys)
+            if query.hasAny(handlingKeys), shouldHandledBySurge == nil {
+                throw AppURLSchemeError.invalidParameter("handled")
+            }
+            let update = SurgeDevice.Update(
+                physicalAddress: try query.requiredString(
+                    "physical-address", "physicaladdress", "mac"),
+                name: query.string("name"),
+                address: query.string("address", "ip"),
+                shouldHandledBySurge: shouldHandledBySurge
+            )
+            return .updateSurgeDevice(update)
         default:
             throw AppURLSchemeError.unknownCommand(path.displayValue)
         }
@@ -430,6 +444,7 @@ nonisolated enum AppURLCommand: Equatable, Sendable {
     case updateCore(CoreUpdateChannel)
     case downloadSurgeMITMCertificate
     case setSurgeFeature(SurgeFeature, enabled: Bool)
+    case updateSurgeDevice(SurgeDevice.Update)
 }
 
 nonisolated enum AppURLRefreshTarget: Equatable, Sendable {

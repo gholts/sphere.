@@ -48,13 +48,13 @@ extension AppModel {
         )
         if let data = try? JSONEncoder().encode(snapshot) {
             defaults.set(data, forKey: cacheKey())
-            lastCacheSave = Date()
+            lastCacheSave = .now
         }
     }
 
     func scheduleCacheSave() {
         guard hasCacheableData else { return }
-        let delay = cacheSaveInterval - Date().timeIntervalSince(lastCacheSave)
+        let delay = cacheSaveInterval - Date.now.timeIntervalSince(lastCacheSave)
         guard delay > 0 else {
             saveCachedDataIfUseful()
             return
@@ -65,10 +65,10 @@ extension AppModel {
 
     func runPendingCacheSave() async {
         guard pendingCacheSave else { return }
-        let delay = max(0, cacheSaveInterval - Date().timeIntervalSince(lastCacheSave))
+        let delay = max(0, cacheSaveInterval - Date.now.timeIntervalSince(lastCacheSave))
         if delay > 0 {
             do {
-                try await Task.sleep(for: .nanoseconds(Int64(delay * 1_000_000_000)))
+                try await Task.sleep(for: .seconds(delay))
             } catch {
                 return
             }

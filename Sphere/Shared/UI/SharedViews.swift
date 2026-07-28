@@ -88,10 +88,12 @@ struct PendingErrorBadge: View {
     }
 }
 
-struct BackendPageToolbar: ViewModifier {
+struct BackendPageToolbar<TrailingAction: View>: ViewModifier {
     @Environment(AppModel.self) private var app
     @Environment(\.iPadTopNavigationControls) private var iPadTopNavigationControls
     var tab: AppTab
+    var showsAdditionalTrailingAction: Bool
+    var additionalTrailingAction: TrailingAction
 
     func body(content: Content) -> some View {
         content
@@ -107,6 +109,12 @@ struct BackendPageToolbar: ViewModifier {
                         NavigationTitleBadge(
                             title: tab.title, message: app.visibleBackendErrorMessage,
                             isLoadingError: app.showsBackendErrorSpinner)
+                    }
+                    if showsAdditionalTrailingAction {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            additionalTrailingAction
+                        }
+                        ToolbarSpacer(.fixed, placement: .topBarTrailing)
                     }
                     ToolbarItem(id: "backend-refresh", placement: .topBarTrailing) {
                         RefreshToolbarButton(
@@ -140,7 +148,27 @@ private struct IPadTopTabPicker: View {
 
 extension View {
     func backendPageToolbar(tab: AppTab) -> some View {
-        modifier(BackendPageToolbar(tab: tab))
+        modifier(
+            BackendPageToolbar(
+                tab: tab,
+                showsAdditionalTrailingAction: false,
+                additionalTrailingAction: EmptyView()
+            )
+        )
+    }
+
+    func backendPageToolbar<TrailingAction: View>(
+        tab: AppTab,
+        showsAdditionalTrailingAction: Bool,
+        @ViewBuilder additionalTrailingAction: () -> TrailingAction
+    ) -> some View {
+        modifier(
+            BackendPageToolbar(
+                tab: tab,
+                showsAdditionalTrailingAction: showsAdditionalTrailingAction,
+                additionalTrailingAction: additionalTrailingAction()
+            )
+        )
     }
 }
 

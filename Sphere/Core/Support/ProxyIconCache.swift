@@ -11,13 +11,7 @@ actor ProxyIconDiskCache {
     private static let singleHexDigitLength = 1
 
     init(directory: URL? = nil) {
-        let cachesDirectory =
-            FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
-            ?? URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-        let root =
-            directory
-            ?? cachesDirectory
-            .appendingPathComponent("ProxyIconCache", isDirectory: true)
+        let root = directory ?? URL.cachesDirectory.appending(path: "ProxyIconCache")
         self.directory = root
         try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
     }
@@ -35,7 +29,7 @@ actor ProxyIconDiskCache {
     private func fileURL(for icon: String) -> URL {
         let digest = SHA256.hash(data: Data(icon.utf8))
         let name = digest.map(Self.hexByte).joined()
-        return directory.appendingPathComponent(name, isDirectory: false)
+        return directory.appending(path: name)
     }
 
     private static func hexByte(_ byte: UInt8) -> String {
@@ -62,16 +56,16 @@ actor ProxyIconCache {
         if let task = tasks[icon] {
             return await task.value
         }
-        let maxIconBytes = maxIconBytes
+        let iconByteLimit = maxIconBytes
         let task = Task {
-            await Self.loadImage(for: icon, maxIconBytes: maxIconBytes)
+            await Self.loadImage(for: icon, maxIconBytes: iconByteLimit)
         }
         tasks[icon] = task
         let image = await task.value
         tasks[icon] = nil
         if let image {
             images.setObject(CGImageBox(image), forKey: icon as NSString)
-        } else {
+        } else if Self.remoteURL(for: icon) == nil {
             misses.insert(icon)
         }
         return image
@@ -118,8 +112,8 @@ actor ProxyIconCache {
     }
 
     nonisolated private static func isSuccessful(_ response: URLResponse) -> Bool {
-        guard let response = response as? HTTPURLResponse else { return true }
-        return 200..<300 ~= response.statusCode
+        guard let httpResponse = response as? HTTPURLResponse else { return true }
+        return 200..<300 ~= httpResponse.statusCode
     }
 
     nonisolated private static func decodeDataImage(_ icon: String, maxIconBytes: Int) async

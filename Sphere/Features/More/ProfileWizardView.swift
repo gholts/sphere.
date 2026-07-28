@@ -166,7 +166,7 @@ struct ProfileWizardView: View {
     }
 
     private func test(_ testedProfile: APIProfile, generation: Int) async {
-        let startedAt = Date()
+        let startedAt = Date.now
         let nextResult: ProfileTestResult
         do {
             let overview = try await app.testProfile(testedProfile)
@@ -188,7 +188,7 @@ struct ProfileWizardView: View {
     }
 
     private func waitForMinimumTestingIndicatorDuration(since startedAt: Date) async {
-        let remaining = minimumTestingIndicatorDuration - Date().timeIntervalSince(startedAt)
+        let remaining = minimumTestingIndicatorDuration - Date.now.timeIntervalSince(startedAt)
         guard remaining > 0 else { return }
         try? await Task.sleep(for: .milliseconds(Int(remaining * 1000)))
     }

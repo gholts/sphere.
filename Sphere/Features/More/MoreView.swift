@@ -6,8 +6,7 @@ struct MoreView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var profileForm: ProfileFormPresentation?
     @State private var coreUpdateDialog: CoreUpdateDialog?
-    @State private var mitmCertificateURL: URL?
-    @State private var isDownloadingMitmCertificate = false
+    @State private var mitmCertificateProfile: APIProfile?
     @State private var navigationPath: [MoreRoute] = []
     @State private var handledNavigationRequestID: UUID?
 
@@ -68,23 +67,10 @@ struct MoreView: View {
                     }
 
                     if app.selectedProfile?.kind == .surge {
-                        if let mitmCertificateURL {
-                            ShareLink(item: mitmCertificateURL) {
-                                Label(
-                                    "Share MITM CA Certificate",
-                                    systemImage: "square.and.arrow.up")
-                            }
-                        } else {
-                            Button {
-                                Task { await downloadMITMCertificate() }
-                            } label: {
-                                DisabledAwareActionLabel(
-                                    title: "Share MITM CA Certificate",
-                                    systemImage: "square.and.arrow.up",
-                                    isEnabled: !isDownloadingMitmCertificate
-                                )
-                            }
-                            .disabled(isDownloadingMitmCertificate)
+                        Button(action: startMITMCertificatePreparation) {
+                            Label(
+                                "Share MITM CA Certificate",
+                                systemImage: "square.and.arrow.up")
                         }
                     }
                 }
@@ -102,10 +88,7 @@ struct MoreView: View {
                                         .foregroundStyle(.secondary)
                                 }
                                 Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                                    .foregroundStyle(.primary)
-                                    .accessibilityHidden(true)
+                                RowDisclosureIndicator()
                             }
                         }
                         .foregroundStyle(.primary)
@@ -125,6 +108,12 @@ struct MoreView: View {
             .sheet(item: $coreUpdateDialog) { dialog in
                 CoreUpdateDialogView(dialog: dialog)
             }
+            .sheet(item: $mitmCertificateProfile) { profile in
+                SurgeMITMCertificateShareView(
+                    profileID: profile.id,
+                    fileURL: app.loadedSurgeMITMCertificateURL(for: profile.id)
+                )
+            }
             .navigationDestination(for: MoreRoute.self) { route in
                 switch route {
                 case .configEditor:
@@ -132,9 +121,6 @@ struct MoreView: View {
                 case .logBook:
                     LogBookView()
                 }
-            }
-            .onChange(of: app.selectedProfileID) {
-                mitmCertificateURL = nil
             }
             .onChange(of: app.navigationRequest) { _, request in
                 handleNavigationRequest(request)
@@ -161,16 +147,15 @@ struct MoreView: View {
 
     private func startCoreUpdate(channel: CoreUpdateChannel) {
         coreUpdateDialog = CoreUpdateDialog(channel: channel, phase: .updating)
-        Task { @MainActor in
+        Task {
             let report = await app.upgradeCore(channel: channel)
             coreUpdateDialog = CoreUpdateDialog(channel: channel, phase: .finished(report))
         }
     }
 
-    private func downloadMITMCertificate() async {
-        isDownloadingMitmCertificate = true
-        defer { isDownloadingMitmCertificate = false }
-        mitmCertificateURL = await app.downloadSurgeMITMCertificate()
+    private func startMITMCertificatePreparation() {
+        guard let profile = app.selectedProfile, profile.kind == .surge else { return }
+        mitmCertificateProfile = profile
     }
 
     private func handleNavigationRequest(_ request: AppNavigationRequest?) {
@@ -195,6 +180,10 @@ struct MoreView: View {
         case .logBook:
             profileForm = nil
             navigationPath = [.logBook]
+            handledNavigationRequestID = request.id
+        case .surgeMITMCertificate:
+            navigationPath.removeAll()
+            startMITMCertificatePreparation()
             handledNavigationRequestID = request.id
         case .connectionsList, .tab:
             break
@@ -324,9 +313,8 @@ struct OverviewRows: View {
     }
 
     private var metrics: [StatMetric] {
-        var values: [StatMetric] = []
+        var values = [StatMetric(title: "Version", value: overview.version)]
         if backendKind != .surge {
-            values.append(StatMetric(title: "Version", value: overview.version))
             values.append(
                 StatMetric(title: "Memory", value: ByteFormat.memoryBytes(overview.memoryBytes)))
         }

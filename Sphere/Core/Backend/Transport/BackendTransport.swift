@@ -39,7 +39,8 @@ nonisolated struct BackendTransport: Sendable {
         return URLSession(configuration: configuration)
     }
 
-    func request<T: Decodable>(
+    @concurrent
+    func request<T: Decodable & Sendable>(
         path: String,
         query: [URLQueryItem] = [],
         response _: T.Type
@@ -50,11 +51,29 @@ nonisolated struct BackendTransport: Sendable {
             query: query,
             timeoutInterval: requestTimeout
         )
-        let data = try await data(for: request)
-        return try JSONDecoder().decode(T.self, from: data)
+        let response = try await response(for: request)
+        return try JSONDecoder().decode(T.self, from: jsonData(response.data))
     }
 
-    func request<T: Decodable>(
+    @concurrent
+    func requestWithMetadata<T: Decodable & Sendable>(
+        path: String,
+        query: [URLQueryItem],
+        response _: T.Type
+    ) async throws -> [String: String] {
+        let request = try URLRequestFactory.request(
+            profile: profile,
+            path: path,
+            query: query,
+            timeoutInterval: requestTimeout
+        )
+        let response = try await response(for: request)
+        _ = try JSONDecoder().decode(T.self, from: jsonData(response.data))
+        return response.http.normalizedHeaders
+    }
+
+    @concurrent
+    func request<T: Decodable & Sendable>(
         path: String,
         query: [URLQueryItem],
         method: String,
@@ -69,10 +88,11 @@ nonisolated struct BackendTransport: Sendable {
             body: body,
             timeoutInterval: requestTimeout
         )
-        let data = try await data(for: request)
-        return try JSONDecoder().decode(T.self, from: data)
+        let response = try await response(for: request)
+        return try JSONDecoder().decode(T.self, from: jsonData(response.data))
     }
 
+    @concurrent
     func requestNoBody(
         path: String,
         query: [URLQueryItem] = [],
@@ -87,9 +107,10 @@ nonisolated struct BackendTransport: Sendable {
             body: body,
             timeoutInterval: requestTimeout
         )
-        _ = try await data(for: request)
+        _ = try await response(for: request)
     }
 
+    @concurrent
     func rawData(
         path: String,
         query: [URLQueryItem],
@@ -104,51 +125,65 @@ nonisolated struct BackendTransport: Sendable {
             body: body,
             timeoutInterval: requestTimeout
         )
-        return try await data(for: request)
+        return try await response(for: request).data
     }
 
     func webSocketStream<T: Decodable & Sendable>(
         path: String,
         query: [URLQueryItem],
         response: T.Type,
-        appendsSecretToken: Bool = false
+        appendsSecretToken: Bool = false,
+        bufferingPolicy: AsyncThrowingStream<T, Error>.Continuation.BufferingPolicy =
+            .bufferingNewest(1)
     ) -> AsyncThrowingStream<T, Error> {
-        AsyncThrowingStream { continuation in
-            do {
-                let request = try webSocketRequest(
-                    path: path,
-                    query: query,
-                    appendsSecretToken: appendsSecretToken
-                )
-                let task = session.webSocketTask(with: request)
-                task.resume()
-                let streamTask = Task {
-                    do {
-                        while !Task.isCancelled {
-                            let message = try await task.receive()
-                            let data: Data
-                            switch message {
-                            case .data(let value):
-                                data = value
-                            case .string(let value):
-                                data = Data(value.utf8)
-                            @unknown default:
-                                continue
-                            }
-                            continuation.yield(try JSONDecoder().decode(response, from: data))
+        let (stream, continuation) = AsyncThrowingStream.makeStream(
+            of: T.self,
+            throwing: Error.self,
+            bufferingPolicy: bufferingPolicy
+        )
+
+        do {
+            let request = try webSocketRequest(
+                path: path,
+                query: query,
+                appendsSecretToken: appendsSecretToken
+            )
+            let webSocketTask = session.webSocketTask(with: request)
+            webSocketTask.resume()
+
+            let receiverTask = Task {
+                let decoder = JSONDecoder()
+                do {
+                    while !Task.isCancelled {
+                        let message = try await webSocketTask.receive()
+                        let data: Data
+                        switch message {
+                        case .data(let value):
+                            data = value
+                        case .string(let value):
+                            data = Data(value.utf8)
+                        @unknown default:
+                            continue
                         }
-                    } catch {
-                        continuation.finish(throwing: error)
+                        continuation.yield(
+                            try decoder.decode(response, from: data)
+                        )
                     }
+                    continuation.finish()
+                } catch where Task.isCancelled {
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
                 }
-                continuation.onTermination = { _ in
-                    streamTask.cancel()
-                    task.cancel(with: .goingAway, reason: nil)
-                }
-            } catch {
-                continuation.finish(throwing: error)
             }
+            continuation.onTermination = { _ in
+                receiverTask.cancel()
+                webSocketTask.cancel(with: .goingAway, reason: nil)
+            }
+        } catch {
+            continuation.finish(throwing: error)
         }
+        return stream
     }
 
     func escaped(_ value: String) -> String {
@@ -157,16 +192,25 @@ nonisolated struct BackendTransport: Sendable {
         return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
     }
 
-    private func data(for request: URLRequest) async throws -> Data {
+    private func response(for request: URLRequest) async throws -> (
+        data: Data, http: HTTPURLResponse
+    ) {
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else {
             throw BackendError.invalidResponse
         }
         guard (200..<300).contains(http.statusCode) else {
+            let errorBodyLimit = 16_384
             throw BackendError.httpStatus(
-                http.statusCode, String(data: data, encoding: .utf8) ?? "")
+                http.statusCode,
+                String(bytes: data.prefix(errorBodyLimit), encoding: .utf8) ?? ""
+            )
         }
-        return data.isEmpty ? Data("{}".utf8) : data
+        return (data, http)
+    }
+
+    private func jsonData(_ data: Data) -> Data {
+        data.isEmpty ? Data("{}".utf8) : data
     }
 
     private func webSocketRequest(
@@ -195,6 +239,18 @@ nonisolated struct BackendTransport: Sendable {
         }
         request.url = webSocketURL
         return request
+    }
+}
+
+private extension HTTPURLResponse {
+    nonisolated var normalizedHeaders: [String: String] {
+        Dictionary(
+            allHeaderFields.compactMap { rawKey, value in
+                guard let headerName = rawKey as? String else { return nil }
+                return (headerName.lowercased(), String(describing: value))
+            },
+            uniquingKeysWith: { _, latest in latest }
+        )
     }
 }
 

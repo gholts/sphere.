@@ -193,7 +193,9 @@ nonisolated struct MihomoClient: ProxyBackendClient {
     func logs(level: LogLevel) -> AsyncThrowingStream<LogEntry, Error> {
         transport.webSocketStream(
             path: "/logs", query: [URLQueryItem(name: "level", value: level.rawValue)],
-            response: LogEntry.self)
+            response: LogEntry.self,
+            bufferingPolicy: .bufferingNewest(400)
+        )
     }
 
     func connectionEvents(interval: Int) -> AsyncThrowingStream<ConnectionsSnapshot, Error> {

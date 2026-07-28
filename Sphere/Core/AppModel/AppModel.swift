@@ -22,7 +22,6 @@ final class AppModel {
     var backendErrorDebounceRevision = 0
     var cacheSaveRevision = 0
     var sourceIPTags: [SourceIPTag] = []
-
     @ObservationIgnored let defaults: UserDefaults
     @ObservationIgnored let makeClient: @MainActor (APIProfile) -> any ProxyBackendClient
     @ObservationIgnored let progressActivityReporter: any ProgressActivityReporting
@@ -118,6 +117,11 @@ final class AppModel {
     var connections: ConnectionsSnapshot {
         get { liveState.connections }
         set { liveState.connections = newValue }
+    }
+
+    var devices: [SurgeDevice] {
+        get { liveState.devices }
+        set { liveState.devices = newValue }
     }
 
     var logs: [LogEntry] {

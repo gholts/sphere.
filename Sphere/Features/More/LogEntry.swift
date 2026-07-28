@@ -4,7 +4,7 @@ nonisolated struct LogEntry: Identifiable, Decodable, Equatable, Sendable {
     var id = UUID()
     var type: String
     var payload: String
-    var date = Date()
+    var date = Date.now
 
     enum CodingKeys: String, CodingKey {
         case type

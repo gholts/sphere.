@@ -50,8 +50,9 @@ final class ProfileStore {
 
     private func applyProfiles(_ decodedProfiles: [APIProfile], storedID: String?) {
         profiles = decodedProfiles
-        if let storedID = storedID.flatMap(UUID.init(uuidString:)) {
-            selectedProfileID = storedID
+        if let selectedID = storedID.flatMap(UUID.init(uuidString:)),
+            profiles.contains(where: { $0.id == selectedID }) {
+            selectedProfileID = selectedID
         } else {
             selectedProfileID = profiles.first?.id
         }
@@ -104,7 +105,7 @@ final class ProfileStore {
         for index in offsets.sorted(by: >) {
             profiles.remove(at: index)
         }
-        let removedBeforeDestination = offsets.filter { $0 < destination }.count
+        let removedBeforeDestination = offsets.count { $0 < destination }
         profiles.insert(contentsOf: movingProfiles, at: destination - removedBeforeDestination)
         saveProfiles()
     }

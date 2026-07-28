@@ -13,6 +13,12 @@ extension AppModel {
         }
     }
 
+    func updateDevices(_ nextDevices: [SurgeDevice]) {
+        if devices != nextDevices {
+            devices = nextDevices
+        }
+    }
+
     func updateMemory(_ memoryBytes: Int) {
         guard overview.memoryBytes != memoryBytes else { return }
         overview.memoryBytes = memoryBytes

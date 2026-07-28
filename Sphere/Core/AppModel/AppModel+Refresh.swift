@@ -19,7 +19,6 @@ private enum RefreshProxiesValue: Sendable {
 private enum RefreshRulesValue: Sendable {
     case rules(Result<[RuleItem], Error>)
     case ruleProviders(Result<[RuleProvider], Error>)
-    case configs(Result<[String: JSONValue], Error>)
 }
 
 nonisolated private func backendResult<T: Sendable>(
@@ -176,7 +175,6 @@ extension AppModel {
             taskGroup.addTask {
                 .ruleProviders(await backendResult { try await client.ruleProviders() })
             }
-            taskGroup.addTask { .configs(await backendResult { try await client.configs() }) }
 
             for await value in taskGroup {
                 switch value {
@@ -184,8 +182,6 @@ extension AppModel {
                     outcome.merge(apply(result) { rules = $0 })
                 case .ruleProviders(let result):
                     outcome.merge(apply(result) { ruleProviders = $0 })
-                case .configs(let result):
-                    outcome.merge(apply(result) { applyConfigs($0) })
                 }
             }
         }
