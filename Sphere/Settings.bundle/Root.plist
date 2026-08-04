@@ -19,6 +19,8 @@
 			<string>Version</string>
 			<key>Key</key>
 			<string>sphere.settings.version</string>
+			<key>DefaultValue</key>
+			<string>1.6.1</string>
 		</dict>
 	</array>
 	<key>StringsTable</key>

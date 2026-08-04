@@ -34,9 +34,9 @@
 			<key>Type</key>
 			<string>PSGroupSpecifier</string>
 			<key>Title</key>
-			<string>Application Icon Illustration</string>
+			<string>Third-Party Icon Artwork</string>
 			<key>FooterText</key>
-			<string>App icon illustrations include assets licensed under Creative Commons Attribution 4.0 International (CC BY 4.0). You are free to share and adapt the material with appropriate attribution. Source and author information should be retained with the project records.</string>
+			<string>Sphere's app icon incorporates original artwork by Figma Community creator @brixtemplates under CC BY 4.0. Copyright in that artwork remains with its original creator; Sphere's copyright notice does not claim it.</string>
 		</dict>
 		<dict>
 			<key>Type</key>
@@ -52,11 +52,11 @@
 			<key>Type</key>
 			<string>PSTitleValueSpecifier</string>
 			<key>Title</key>
-			<string>Attribution</string>
+			<string>Original Creator</string>
 			<key>Key</key>
 			<string>sphere.settings.iconAttribution</string>
 			<key>DefaultValue</key>
-			<string>Icon illustration by Figma Community author @brixtemplates</string>
+			<string>Figma Community creator @brixtemplates</string>
 		</dict>
 		<dict>
 			<key>Type</key>

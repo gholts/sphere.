@@ -30,7 +30,7 @@ private enum SettingsBundleDefaults {
         defaults.set("Hugo Lee", forKey: "sphere.settings.sphereCopyright")
         defaults.set("CC BY 4.0", forKey: "sphere.settings.iconLicense")
         defaults.set(
-            "Icon illustration by Figma Community author @brixtemplates",
+            "Figma Community creator @brixtemplates",
             forKey: "sphere.settings.iconAttribution")
         defaults.set("MIT License", forKey: "sphere.settings.zashboardLicense")
         defaults.set("MIT License", forKey: "sphere.settings.yasdLicense")
